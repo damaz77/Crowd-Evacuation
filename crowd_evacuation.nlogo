@@ -1,12 +1,14 @@
 ;;this toy example shows a turtle which entry in the lower-left corner of the grid and has to exit in the upper-right corner
 
-patches-own [wall]
+patches-own [wall impasse]
+globals [last-x last-y]
 
 to setup
   clear-all
   create-regular-grid
   if not regular-grid?[
     add-random-walls
+    find-impasses
   ]
   create-turtle
   reset-ticks
@@ -18,10 +20,10 @@ to create-regular-grid
     let j 0
     while [j <= max-pxcor ] [
       ifelse ((j + 1) mod 2 = 0) and ((i + 1) mod 2 = 0) [
-        ask patch i j [set pcolor black set wall 1]
+        ask patch i j [set pcolor black set wall 1 set impasse 0]
       ]
       [
-        ask patch i j [set pcolor white set wall 0]
+        ask patch i j [set pcolor white set wall 0 set impasse 0]
       ]
       set j j + 1
     ]
@@ -30,7 +32,7 @@ to create-regular-grid
 end
 
 to add-random-walls
-  let random-walls-number max-pxcor * 4
+  let random-walls-number max-pxcor * 8
   let walls-added 0
   while [walls-added < random-walls-number] [
     let random-x random max-pxcor + 1
@@ -38,6 +40,26 @@ to add-random-walls
     ask patch random-x random-y [set pcolor black set wall 1]
     set walls-added walls-added + 1
   ]
+end
+
+to find-impasses
+      foreach sort patches[
+        if [pxcor] of ? != max-pxcor and [pycor] of ? != max-pycor [
+          let feasable-moves [ ]
+          ask ?[
+            foreach sort neighbors4[
+              ask ?[
+                if (wall = 0) [
+                  set feasable-moves lput ? feasable-moves
+                ]
+              ]
+            ]
+            if length feasable-moves <= 1 [
+              ask ? [set impasse 1 set pcolor grey]
+            ]
+          ]
+        ]
+      ]
 end
 
 to create-turtle
@@ -67,9 +89,8 @@ to do-random-feasible-move
     ask turtle 0 [
       let feasable-moves [ ]
       foreach sort neighbors4[
-        let w 0
         ask ? [
-          if (wall = 0) [
+          if (wall = 0) and (impasse = 0) [
             set feasable-moves lput ? feasable-moves
           ]
         ]
@@ -83,30 +104,42 @@ to do-shortest-path-feasible-move
   ask turtle 0 [
       let feasable-moves [ ]
       foreach sort neighbors4[
-        let w 0
         ask ? [
-          if (wall = 0)[
-            set feasable-moves lput ? feasable-moves             ;; if there aren't walls, then add the move to the feasable-moves list
+          if (wall = 0) and (impasse = 0) [
+            set feasable-moves lput ? feasable-moves
           ]
         ]
       ]
       let best-x 0
       let best-y 0
+      if length feasable-moves <= 1 [
+        ask patch-here [set impasse 1 set pcolor brown]
+      ]
       foreach feasable-moves[
-        if ([pxcor] of ? + [pycor] of ?) >= (best-x + best-y) [   ;; the heuristic here is to find the move with the max sum of x and y
+        ifelse random 10 > 2[
+          if ([pxcor] of ? + [pycor] of ?) >= (best-x + best-y) [   ;; the heuristic here is to find the move with the max sum of x and y
             ifelse ([pxcor] of ? + [pycor] of ?) > (best-x + best-y) [
               set best-x [pxcor] of ?
               set best-y [pycor] of ?
             ]
             [
-              if random 2 > 0[
+              if abs ([pxcor] of ? - [pycor] of ?)  < abs (best-x - best-y)  [
                 set best-x [pxcor] of ?
                 set best-y [pycor] of ?
               ]
             ]
+          ]
+          set last-x [xcor] of turtle 0
+          set last-y [ycor] of turtle 0
+          setxy best-x best-y
+        ]
+        [
+          let random-move random (length feasable-moves)
+          move-to item random-move feasable-moves
         ]
       ]
-      setxy best-x best-y
+
+
     ]
 end
 @#$#@#$#@
