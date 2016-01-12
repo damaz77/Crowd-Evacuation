@@ -31,6 +31,7 @@ to create-regular-grid
   ]
 end
 
+
 to add-random-walls
   let random-walls-number max-pxcor * 8
   let walls-added 0
@@ -41,6 +42,7 @@ to add-random-walls
     set walls-added walls-added + 1
   ]
 end
+
 
 to find-impasses
       foreach sort patches[
@@ -62,6 +64,7 @@ to find-impasses
       ]
 end
 
+
 to create-turtle
   create-turtles 1
   ask turtle 0 [
@@ -69,6 +72,7 @@ to create-turtle
     set color red
   ]
 end
+
 
 to go
   ifelse shortest-or-random?[
@@ -85,6 +89,7 @@ to go
   tick
 end
 
+
 to do-random-feasible-move
     ask turtle 0 [
       let feasable-moves [ ]
@@ -99,6 +104,7 @@ to do-random-feasible-move
       move-to item random-move feasable-moves
     ]
 end
+
 
 to do-shortest-path-feasible-move
   ask turtle 0 [
@@ -116,7 +122,7 @@ to do-shortest-path-feasible-move
         ask patch-here [set impasse 1 set pcolor brown]
       ]
       foreach feasable-moves[
-        ifelse random 10 > 2[
+        ifelse random 10 >= 2[ ;;with probability 0.8 do an "heuristic" step
           if ([pxcor] of ? + [pycor] of ?) >= (best-x + best-y) [   ;; the heuristic here is to find the move with the max sum of x and y
             ifelse ([pxcor] of ? + [pycor] of ?) > (best-x + best-y) [
               set best-x [pxcor] of ?
@@ -133,7 +139,7 @@ to do-shortest-path-feasible-move
           set last-y [ycor] of turtle 0
           setxy best-x best-y
         ]
-        [
+        [ ;; with probability 0.2 do a random step
           let random-move random (length feasable-moves)
           move-to item random-move feasable-moves
         ]
