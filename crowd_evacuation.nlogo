@@ -1,9 +1,8 @@
-globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio disabled-ratio normal-speed disabled-speed]
+globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio disabled-ratio normal-speed disabled-speed ticks-normals ticks-altruist ticks-non-altruist normal-exited
+  altruist-exited non-altruist-exited ticks-disabled disabled-exited]
 
 breed [normal-persons]
 breed [disableds]
-breed [helpings]
-
 
 patches-own
 [
@@ -14,6 +13,7 @@ turtles-own
 [
   speed
   altruism
+  ticks-count
 ]
 
 to setup
@@ -28,9 +28,17 @@ end
 
 to setup-parameters
   set entry-ratio 0.2
-  set disabled-ratio 0.1
+  set disabled-ratio 0.2
   set normal-speed 0.5
   set disabled-speed 0.1
+  set ticks-normals 0
+  set ticks-disabled 0
+  set ticks-altruist 0
+  set ticks-non-altruist 0
+  set normal-exited 0
+  set disabled-exited 0
+  set altruist-exited 0
+  set non-altruist-exited 0
 end
 
 to setup-patches
@@ -73,6 +81,7 @@ to go
           set speed disabled-speed
           set color red
           set altruism 0.0
+          set ticks-count 0
         ]
       ]
       [
@@ -83,6 +92,7 @@ to go
           set speed normal-speed
           set color blue
           set altruism 0.5
+          set ticks-count 0
         ]
       ]
     ]
@@ -93,6 +103,7 @@ to go
       do-random-feasible-move
       check-if-exit
     ]
+    set ticks-count ticks-count + 1
   ]
   tick
 end
@@ -133,47 +144,37 @@ to do-random-feasible-move
     ]
     ifelse neighbors-disabled > 0 [
       ifelse random-float 1 < altruism [
-          ifelse right-altruism-possible and up-altruism-possible [
-            let p 0.5
-            ifelse random 1 < p[
-              set speed (disabled-speed + normal-speed) / 2
-              set color orange
-              set altruism 0.0
-              ask disableds-at 1 0[
-                die
-              ]
-              setxy [xcor] of self + 1 [ycor] of self
+        set speed (disabled-speed + normal-speed) / 2
+        set color orange
+        set altruism 0.0
+        ifelse right-altruism-possible and up-altruism-possible [
+          ifelse random 1 < 0.5 [
+            ask disableds-at 1 0[
+              die
             ]
-            [
-              set speed (disabled-speed + normal-speed) / 2
-              set color orange
-              set altruism 0.0
-              ask disableds-at 0 1[
-                die
-              ]
-              setxy [xcor] of self [ycor] of self + 1
-            ]
+            setxy [xcor] of self + 1 [ycor] of self
           ]
           [
-            if up-altruism-possible [
-              set speed (disabled-speed + normal-speed) / 2
-              set color orange
-              set altruism 0.0
-              ask disableds-at 0 1[
-                die
-              ]
-              setxy [xcor] of self [ycor] of self + 1
+            ask disableds-at 0 1[
+              die
             ]
-            if right-altruism-possible [
-              set speed (disabled-speed + normal-speed) / 2
-              set color orange
-              set altruism 0.0
-              ask disableds-at 1 0[
-                die
-              ]
-              setxy [xcor] of self + 1 [ycor] of self
-            ]
+            setxy [xcor] of self [ycor] of self + 1
           ]
+        ]
+        [
+          if up-altruism-possible [
+            ask disableds-at 0 1[
+              die
+            ]
+            setxy [xcor] of self [ycor] of self + 1
+          ]
+          if right-altruism-possible [
+            ask disableds-at 1 0[
+              die
+            ]
+            setxy [xcor] of self + 1 [ycor] of self
+          ]
+        ]
       ]
       [
         if altruism > 0 [
@@ -204,6 +205,24 @@ end
 
 to check-if-exit
   if member? patch-here exit-points[
+    ifelse member? self normal-persons[
+      if color = blue[
+        set ticks-normals ticks-normals + ticks-count
+        set normal-exited normal-exited + 1
+      ]
+      if color = orange[
+        set ticks-altruist ticks-altruist + ticks-count
+        set altruist-exited altruist-exited + 1
+      ]
+      if color = black[
+        set ticks-non-altruist ticks-non-altruist + ticks-count
+        set non-altruist-exited non-altruist-exited + 1
+      ]
+    ]
+    [
+      set ticks-disabled ticks-disabled + ticks-count
+      set disabled-exited disabled-exited + 1
+    ]
     die
   ]
 end
@@ -231,7 +250,7 @@ GRAPHICS-WINDOW
 30
 1
 1
-1
+0
 ticks
 30.0
 
@@ -268,6 +287,46 @@ NIL
 NIL
 NIL
 0
+
+PLOT
+825
+35
+1025
+185
+People Count
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -13345367 true "" "plot count normal-persons"
+"pen-1" 1.0 0 -2674135 true "" "plot count disableds"
+
+PLOT
+825
+205
+1157
+434
+Average Ticks Count
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -13345367 true "" "if normal-exited > 0 [plot ticks-normals / normal-exited]"
+"pen-1" 1.0 0 -2674135 true "" "if disabled-exited > 0 [plot ticks-disabled / disabled-exited]"
+"pen-2" 1.0 0 -955883 true "" "if altruist-exited > 0 [plot ticks-altruist / altruist-exited]"
+"pen-3" 1.0 0 -16777216 true "" "if non-altruist-exited > 0 [plot ticks-non-altruist / non-altruist-exited]"
 
 @#$#@#$#@
 ## WHAT IS IT?
