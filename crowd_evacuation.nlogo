@@ -80,7 +80,7 @@ to go
           set shape "x"
           set speed disabled-speed
           set color red
-          set altruism 0.0
+          set altruism -1.0
           set ticks-count 0
         ]
       ]
@@ -91,7 +91,7 @@ to go
           set ycor [pycor] of entry
           set speed normal-speed
           set color blue
-          set altruism 0.5
+          set altruism global-altruism
           set ticks-count 0
         ]
       ]
@@ -177,7 +177,7 @@ to do-random-feasible-move
         ]
       ]
       [
-        if altruism > 0 [
+        if altruism >= 0 [
           set altruism 0.0
           set color black
         ]
@@ -327,6 +327,21 @@ PENS
 "pen-1" 1.0 0 -2674135 true "" "if disabled-exited > 0 [plot ticks-disabled / disabled-exited]"
 "pen-2" 1.0 0 -955883 true "" "if altruist-exited > 0 [plot ticks-altruist / altruist-exited]"
 "pen-3" 1.0 0 -16777216 true "" "if non-altruist-exited > 0 [plot ticks-non-altruist / non-altruist-exited]"
+
+SLIDER
+10
+263
+182
+296
+global-altruism
+global-altruism
+0
+1
+0.5
+0.05
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
