@@ -1,162 +1,132 @@
-;;this toy example shows a turtle which entry in the lower-left corner of the grid and has to exit in the upper-right corner
+globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc]
 
-patches-own [wall impasse]
-globals [last-x last-y]
+breed [normal-persons]
+breed [disableds]
+
+patches-own
+[
+  wall
+]
+
+turtles-own
+[
+  speed
+]
 
 to setup
   clear-all
-  create-regular-grid
-  if not regular-grid?[
-    add-random-walls
-    find-impasses
-  ]
-  create-turtle
+  setup-patches
+  setup-entry-points
+  setup-exit-points
+  set-default-shape turtles "person"
   reset-ticks
 end
 
-to create-regular-grid
-  let i 0
-  while [i <= max-pxcor ] [
-    let j 0
-    while [j <= max-pxcor ] [
-      ifelse ((j + 1) mod 2 = 0) and ((i + 1) mod 2 = 0) [
-        ask patch i j [set pcolor black set wall 1 set impasse 0]
-      ]
-      [
-        ask patch i j [set pcolor white set wall 0 set impasse 0]
-      ]
-      set j j + 1
-    ]
-    set i i + 1
+to setup-patches
+  ask patches
+  [
+    set pcolor brown + 3
+    set wall 1
   ]
+  set grid-x-inc 5
+  set grid-y-inc 5
+  set roads patches with
+    [(floor((pxcor + max-pxcor - floor(grid-x-inc)) mod grid-x-inc) = 0) or
+    (floor((pycor + max-pycor) mod grid-y-inc) = 0)]
+  ask roads [ set pcolor white set wall 0]
 end
 
-
-to add-random-walls
-  let random-walls-number max-pxcor * 8
-  let walls-added 0
-  while [walls-added < random-walls-number] [
-    let random-x random max-pxcor + 1
-    let random-y random max-pycor + 1
-    ask patch random-x random-y [set pcolor black set wall 1]
-    set walls-added walls-added + 1
-  ]
+to setup-entry-points
+  set entry-points roads with
+    [(pxcor = 0 and (pycor = max-pycor / 2 or pycor = max-pycor / 2 + grid-y-inc or pycor = max-pycor / 2 - grid-y-inc)) or
+     (pycor = 0 and (pxcor = max-pxcor / 2 or pxcor = max-pxcor / 2 + grid-x-inc or pxcor = max-pxcor / 2 - grid-x-inc))]
+  ask entry-points [ set pcolor green]
 end
 
-
-to find-impasses
-      foreach sort patches[
-        if [pxcor] of ? != max-pxcor and [pycor] of ? != max-pycor [
-          let feasable-moves [ ]
-          ask ?[
-            foreach sort neighbors4[
-              ask ?[
-                if (wall = 0) [
-                  set feasable-moves lput ? feasable-moves
-                ]
-              ]
-            ]
-            if length feasable-moves <= 1 [
-              ask ? [set impasse 1 set pcolor grey]
-            ]
-          ]
-        ]
-      ]
+to setup-exit-points
+  set exit-points roads with
+  [pxcor = max-pxcor and pycor = max-pycor]
+  ask exit-points [set pcolor red]
 end
-
-
-to create-turtle
-  create-turtles 1
-  ask turtle 0 [
-    set shape "circle"
-    set color red
-  ]
-end
-
 
 to go
-  ifelse shortest-or-random?[
-    do-shortest-path-feasible-move
-  ]
-  [
-    do-random-feasible-move
+  if random 3 < 1[
+    ifelse random 5 < 1[
+      create-disableds 1
+      [
+      let entry one-of entry-points
+      set xcor [pxcor] of entry
+      set ycor [pycor] of entry
+      set shape "wheel"
+      set speed 2
+      ]
+    ]
+    [
+      create-normal-persons 1
+      [
+      let entry one-of entry-points
+      set xcor [pxcor] of entry
+      set ycor [pycor] of entry
+      set speed 5
+      ]
+    ]
   ]
 
-  if [xcor] of turtle 0 = max-pxcor and [ycor] of turtle 0 = max-pycor [
-    ask turtle 0 [set color green]            ;; when the turtle has reached the exit point, it becomes green
-    stop
+  ask turtles[
+    if random 10 < speed[
+      do-random-feasible-move
+      check-if-exit
+    ]
   ]
   tick
 end
 
 
 to do-random-feasible-move
-    ask turtle 0 [
-      let feasable-moves [ ]
-      foreach sort neighbors4[
-        ask ? [
-          if (wall = 0) and (impasse = 0) [
-            set feasable-moves lput ? feasable-moves
-          ]
-        ]
+    let right-feasible false
+    let up-feasible false
+    if is-patch? patch-at 1 0 [
+      if [wall] of patch-at 1 0 = 0 [
+        set up-feasible true
       ]
-      let random-move random (length feasable-moves)
-      move-to item random-move feasable-moves
+    ]
+    if is-patch? patch-at 0 1 [
+      if [wall] of patch-at 0 1 = 0 [
+        set right-feasible true
+      ]
+    ]
+    ifelse (right-feasible and up-feasible)[
+      ifelse random 2 < 1[
+        setxy [xcor] of self  [ycor] of self + 1
+      ]
+      [
+        setxy [xcor] of self + 1  [ycor] of self
+      ]
+    ]
+    [
+      if up-feasible [
+        setxy [xcor] of self + 1  [ycor] of self
+      ]
+      if right-feasible[
+        setxy [xcor] of self  [ycor] of self + 1
+      ]
     ]
 end
 
-
-to do-shortest-path-feasible-move
-  ask turtle 0 [
-      let feasable-moves [ ]
-      foreach sort neighbors4[
-        ask ? [
-          if (wall = 0) and (impasse = 0) [
-            set feasable-moves lput ? feasable-moves
-          ]
-        ]
-      ]
-      let best-x 0
-      let best-y 0
-      if length feasable-moves <= 1 [
-        ask patch-here [set impasse 1 set pcolor brown]
-      ]
-      foreach feasable-moves[
-        ifelse random 10 >= 2[ ;;with probability 0.8 do an "heuristic" step
-          if ([pxcor] of ? + [pycor] of ?) >= (best-x + best-y) [   ;; the heuristic here is to find the move with the max sum of x and y
-            ifelse ([pxcor] of ? + [pycor] of ?) > (best-x + best-y) [
-              set best-x [pxcor] of ?
-              set best-y [pycor] of ?
-            ]
-            [
-              if abs ([pxcor] of ? - [pycor] of ?)  < abs (best-x - best-y)  [
-                set best-x [pxcor] of ?
-                set best-y [pycor] of ?
-              ]
-            ]
-          ]
-          set last-x [xcor] of turtle 0
-          set last-y [ycor] of turtle 0
-          setxy best-x best-y
-        ]
-        [ ;; with probability 0.2 do a random step
-          let random-move random (length feasable-moves)
-          move-to item random-move feasable-moves
-        ]
-      ]
-
-
-    ]
+to check-if-exit
+  if member? patch-here exit-points[
+    die
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-730
-551
+685
+506
 -1
 -1
-10.0
+15.0
 1
 10
 1
@@ -167,9 +137,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-50
+30
 0
-50
+30
 1
 1
 1
@@ -194,10 +164,10 @@ NIL
 1
 
 BUTTON
-37
-363
-100
-396
+32
+212
+95
+245
 NIL
 go
 T
@@ -209,28 +179,6 @@ NIL
 NIL
 NIL
 0
-
-SWITCH
-20
-298
-190
-331
-shortest-or-random?
-shortest-or-random?
-0
-1
--1000
-
-SWITCH
-22
-233
-148
-266
-regular-grid?
-regular-grid?
-1
-1
--1000
 
 @#$#@#$#@
 ## WHAT IS IT?
