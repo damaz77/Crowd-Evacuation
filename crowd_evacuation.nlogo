@@ -1,4 +1,4 @@
-globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc]
+globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio disabled-ratio]
 
 breed [normal-persons]
 breed [disableds]
@@ -15,11 +15,17 @@ turtles-own
 
 to setup
   clear-all
+  setup-parameters
   setup-patches
   setup-entry-points
   setup-exit-points
   set-default-shape turtles "person"
   reset-ticks
+end
+
+to setup-parameters
+  set entry-ratio 0.2
+  set disabled-ratio 0.1
 end
 
 to setup-patches
@@ -52,14 +58,14 @@ end
 to go
   let entry one-of entry-points with [count turtles-at 0 0 = 0]
   if is-patch? entry[
-    if random 3 < 1[
-      ifelse random 5 < 1[
+    if random-float 1 < entry-ratio[
+      ifelse random-float 1 < disabled-ratio[
         create-disableds 1
         [
           set xcor [pxcor] of entry
           set ycor [pycor] of entry
           set shape "x"
-          set speed 2
+          set speed 0.2
           set color red
         ]
       ]
@@ -68,7 +74,7 @@ to go
         [
           set xcor [pxcor] of entry
           set ycor [pycor] of entry
-          set speed 5
+          set speed 0.5
           set color blue
         ]
       ]
@@ -76,7 +82,7 @@ to go
   ]
 
   ask turtles[
-    if random 10 < speed[
+    if random-float 1 < speed[
       do-random-feasible-move
       check-if-exit
     ]
