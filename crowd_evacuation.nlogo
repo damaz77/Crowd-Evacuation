@@ -50,24 +50,27 @@ to setup-exit-points
 end
 
 to go
-  if random 3 < 1[
-    ifelse random 5 < 1[
-      create-disableds 1
-      [
-      let entry one-of entry-points
-      set xcor [pxcor] of entry
-      set ycor [pycor] of entry
-      set shape "wheel"
-      set speed 2
+  let entry one-of entry-points with [count turtles-at 0 0 = 0]
+  if is-patch? entry[
+    if random 3 < 1[
+      ifelse random 5 < 1[
+        create-disableds 1
+        [
+          set xcor [pxcor] of entry
+          set ycor [pycor] of entry
+          set shape "x"
+          set speed 2
+          set color red
+        ]
       ]
-    ]
-    [
-      create-normal-persons 1
       [
-      let entry one-of entry-points
-      set xcor [pxcor] of entry
-      set ycor [pycor] of entry
-      set speed 5
+        create-normal-persons 1
+        [
+          set xcor [pxcor] of entry
+          set ycor [pycor] of entry
+          set speed 5
+          set color blue
+        ]
       ]
     ]
   ]
@@ -86,12 +89,12 @@ to do-random-feasible-move
     let right-feasible false
     let up-feasible false
     if is-patch? patch-at 1 0 [
-      if [wall] of patch-at 1 0 = 0 [
+      if [wall] of patch-at 1 0 = 0 and count [turtles-at 0 0] of patch-at 1 0 = 0[
         set up-feasible true
       ]
     ]
     if is-patch? patch-at 0 1 [
-      if [wall] of patch-at 0 1 = 0 [
+      if [wall] of patch-at 0 1 = 0 and count [turtles-at 0 0] of patch-at 0 1 = 0[
         set right-feasible true
       ]
     ]
