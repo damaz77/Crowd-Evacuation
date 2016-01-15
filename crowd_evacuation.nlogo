@@ -28,7 +28,6 @@ end
 
 to setup-parameters
   set entry-ratio 0.2
-  set disabled-ratio 0.2
   set normal-speed 0.5
   set disabled-speed 0.1
   set ticks-normals 0
@@ -177,7 +176,7 @@ to do-random-feasible-move
         ]
       ]
       [
-        if altruism >= 0 [
+        if altruism >= 0 and color != orange [
           set altruism 0.0
           set color black
         ]
@@ -352,7 +351,7 @@ disabled-ratio
 disabled-ratio
 0
 1
-0.2
+0.1
 0.05
 1
 NIL
