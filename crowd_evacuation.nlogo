@@ -1,4 +1,4 @@
-globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio disabled-ratio normal-speed disabled-speed ticks-normals ticks-altruist ticks-non-altruist normal-exited
+globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio normal-speed disabled-speed ticks-normals ticks-altruist ticks-non-altruist normal-exited
   altruist-exited non-altruist-exited ticks-disabled disabled-exited]
 
 breed [normal-persons]
@@ -338,6 +338,21 @@ global-altruism
 0
 1
 0.5
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+10
+307
+182
+340
+disabled-ratio
+disabled-ratio
+0
+1
+0.2
 0.05
 1
 NIL
