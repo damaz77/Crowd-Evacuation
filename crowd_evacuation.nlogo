@@ -28,7 +28,7 @@ end
 
 to setup-parameters
   set entry-ratio 0.2
-  set disabled-ratio 0.3
+  set disabled-ratio 0.1
   set normal-speed 0.5
   set disabled-speed 0.1
 end
