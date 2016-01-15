@@ -1,7 +1,9 @@
-globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio disabled-ratio]
+globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio disabled-ratio normal-speed disabled-speed]
 
 breed [normal-persons]
 breed [disableds]
+breed [helpings]
+
 
 patches-own
 [
@@ -11,6 +13,7 @@ patches-own
 turtles-own
 [
   speed
+  altruism
 ]
 
 to setup
@@ -25,7 +28,9 @@ end
 
 to setup-parameters
   set entry-ratio 0.2
-  set disabled-ratio 0.1
+  set disabled-ratio 0.3
+  set normal-speed 0.5
+  set disabled-speed 0.1
 end
 
 to setup-patches
@@ -65,8 +70,9 @@ to go
           set xcor [pxcor] of entry
           set ycor [pycor] of entry
           set shape "x"
-          set speed 0.2
+          set speed disabled-speed
           set color red
+          set altruism 0.0
         ]
       ]
       [
@@ -74,8 +80,9 @@ to go
         [
           set xcor [pxcor] of entry
           set ycor [pycor] of entry
-          set speed 0.5
+          set speed normal-speed
           set color blue
+          set altruism 0.5
         ]
       ]
     ]
@@ -94,30 +101,103 @@ end
 to do-random-feasible-move
     let right-feasible false
     let up-feasible false
+    let right-altruism-possible false
+    let up-altruism-possible false
+    let neighbors-disabled 0
     if is-patch? patch-at 1 0 [
-      if [wall] of patch-at 1 0 = 0 and count [turtles-at 0 0] of patch-at 1 0 = 0[
-        set up-feasible true
+      if [wall] of patch-at 1 0 = 0 [
+        ifelse count [turtles-at 0 0] of patch-at 1 0 = 0[
+          set right-feasible true
+        ]
+        [
+          if count [disableds-at 0 0] of patch-at 1 0 > 0[
+            set right-altruism-possible true
+            set neighbors-disabled neighbors-disabled + 1
+          ]
+        ]
       ]
     ]
+
     if is-patch? patch-at 0 1 [
-      if [wall] of patch-at 0 1 = 0 and count [turtles-at 0 0] of patch-at 0 1 = 0[
-        set right-feasible true
+      if [wall] of patch-at 0 1 = 0 [
+        ifelse count [turtles-at 0 0] of patch-at 0 1 = 0[
+          set up-feasible true
+        ]
+        [
+          if count [disableds-at 0 0] of patch-at 0 1 > 0[
+            set up-altruism-possible true
+            set neighbors-disabled neighbors-disabled + 1
+          ]
+        ]
       ]
     ]
-    ifelse (right-feasible and up-feasible)[
-      ifelse random 2 < 1[
-        setxy [xcor] of self  [ycor] of self + 1
+    ifelse neighbors-disabled > 0 [
+      ifelse random-float 1 < altruism [
+          ifelse right-altruism-possible and up-altruism-possible [
+            let p 0.5
+            ifelse random 1 < p[
+              set speed (disabled-speed + normal-speed) / 2
+              set color orange
+              set altruism 0.0
+              ask disableds-at 1 0[
+                die
+              ]
+              setxy [xcor] of self + 1 [ycor] of self
+            ]
+            [
+              set speed (disabled-speed + normal-speed) / 2
+              set color orange
+              set altruism 0.0
+              ask disableds-at 0 1[
+                die
+              ]
+              setxy [xcor] of self [ycor] of self + 1
+            ]
+          ]
+          [
+            if up-altruism-possible [
+              set speed (disabled-speed + normal-speed) / 2
+              set color orange
+              set altruism 0.0
+              ask disableds-at 0 1[
+                die
+              ]
+              setxy [xcor] of self [ycor] of self + 1
+            ]
+            if right-altruism-possible [
+              set speed (disabled-speed + normal-speed) / 2
+              set color orange
+              set altruism 0.0
+              ask disableds-at 1 0[
+                die
+              ]
+              setxy [xcor] of self + 1 [ycor] of self
+            ]
+          ]
       ]
       [
-        setxy [xcor] of self + 1  [ycor] of self
+        if altruism > 0 [
+          set altruism 0.0
+          set color black
+        ]
       ]
     ]
     [
-      if up-feasible [
-        setxy [xcor] of self + 1  [ycor] of self
+      ifelse (right-feasible and up-feasible)[
+        ifelse random-float 1 < 0.5[
+          setxy [xcor] of self  [ycor] of self + 1
+        ]
+        [
+          setxy [xcor] of self + 1  [ycor] of self
+        ]
       ]
-      if right-feasible[
-        setxy [xcor] of self  [ycor] of self + 1
+      [
+        if up-feasible [
+          setxy [xcor] of self [ycor] of self + 1
+        ]
+        if right-feasible[
+          setxy [xcor] of self + 1  [ycor] of self
+        ]
       ]
     ]
 end
