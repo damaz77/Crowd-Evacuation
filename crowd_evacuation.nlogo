@@ -1,4 +1,4 @@
-globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc entry-ratio normal-speed disabled-speed ticks-normals ticks-altruist ticks-non-altruist normal-exited
+globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc ticks-normals ticks-altruist ticks-non-altruist normal-exited
   altruist-exited non-altruist-exited ticks-disabled disabled-exited]
 
 breed [normal-persons]
@@ -13,6 +13,9 @@ turtles-own
 [
   speed
   altruism
+  conformism
+  people-right
+  people-up
   ticks-count
 ]
 
@@ -27,9 +30,6 @@ to setup
 end
 
 to setup-parameters
-  set entry-ratio 0.2
-  set normal-speed 0.5
-  set disabled-speed 0.1
   set ticks-normals 0
   set ticks-disabled 0
   set ticks-altruist 0
@@ -80,6 +80,7 @@ to go
           set speed disabled-speed
           set color red
           set altruism -1.0
+          set conformism global-conformism
           set ticks-count 0
         ]
       ]
@@ -91,6 +92,7 @@ to go
           set speed normal-speed
           set color blue
           set altruism global-altruism
+          set conformism global-conformism
           set ticks-count 0
         ]
       ]
@@ -151,13 +153,13 @@ to do-random-feasible-move
             ask disableds-at 1 0[
               die
             ]
-            setxy [xcor] of self + 1 [ycor] of self
+            go-right
           ]
           [
             ask disableds-at 0 1[
               die
             ]
-            setxy [xcor] of self [ycor] of self + 1
+            go-up
           ]
         ]
         [
@@ -165,13 +167,13 @@ to do-random-feasible-move
             ask disableds-at 0 1[
               die
             ]
-            setxy [xcor] of self [ycor] of self + 1
+            go-up
           ]
           if right-altruism-possible [
             ask disableds-at 1 0[
               die
             ]
-            setxy [xcor] of self + 1 [ycor] of self
+            go-right
           ]
         ]
       ]
@@ -183,23 +185,90 @@ to do-random-feasible-move
       ]
     ]
     [
-      ifelse (right-feasible and up-feasible)[
-        ifelse random-float 1 < 0.5[
-          setxy [xcor] of self  [ycor] of self + 1
+      ifelse (right-feasible and up-feasible)[   ;;qua valuto il conformismo
+        count-people-to-the-right
+
+        count-people-up
+        ;;set label (word people-right "," people-up)
+        set label-color red
+        let more-conformist-way ""
+        ifelse people-right = people-up[
+          set more-conformist-way "either"
         ]
         [
-          setxy [xcor] of self + 1  [ycor] of self
+          ifelse people-right > people-up [
+            set more-conformist-way "right"
+          ]
+          [
+            set more-conformist-way "up"
+          ]
+        ]
+        ifelse more-conformist-way = "either"[
+          ifelse random-float 1 < 0.5[
+            go-up
+          ]
+          [
+            go-right
+          ]
+        ]
+        [
+          ifelse more-conformist-way = "right" [
+            ifelse random-float 1 < conformism [
+              go-right
+            ]
+            [
+              go-up
+            ]
+          ]
+          [
+            ifelse random-float 1 < conformism [ ;;more-conformist-way = "UP"
+              go-up
+            ]
+            [
+              go-right
+            ]
+          ]
         ]
       ]
       [
         if up-feasible [
-          setxy [xcor] of self [ycor] of self + 1
+          go-up
         ]
         if right-feasible[
-          setxy [xcor] of self + 1  [ycor] of self
+          go-right
         ]
       ]
     ]
+end
+
+to go-right
+  setxy [xcor] of self + 1  [ycor] of self
+end
+
+to go-up
+  setxy [xcor] of self [ycor] of self + 1
+end
+
+to count-people-to-the-right
+  set people-right 0
+  let positions-checked 0
+  while [positions-checked < grid-x-inc] [
+    if count [turtles-at 0 0] of patch-at (positions-checked + 1) 0 = 1[
+      set people-right people-right + 1
+    ]
+    set positions-checked positions-checked + 1
+  ]
+end
+
+to count-people-up
+  set people-up 0
+  let positions-checked 0
+  while [positions-checked < grid-x-inc] [
+    if count [turtles-at 0 0] of patch-at 0 (positions-checked + 1) = 1[
+      set people-up people-up + 1
+    ]
+    set positions-checked positions-checked + 1
+  ]
 end
 
 to check-if-exit
@@ -288,29 +357,10 @@ NIL
 0
 
 PLOT
-825
-35
-1025
-185
-People Count
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -13345367 true "" "plot count normal-persons"
-"pen-1" 1.0 0 -2674135 true "" "plot count disableds"
-
-PLOT
-825
-205
-1157
-434
+755
+116
+1087
+345
 Average Ticks Count
 NIL
 NIL
@@ -328,13 +378,73 @@ PENS
 "pen-3" 1.0 0 -16777216 true "" "if non-altruist-exited > 0 [plot ticks-non-altruist / non-altruist-exited]"
 
 SLIDER
-10
-263
-182
-296
+23
+387
+195
+420
 global-altruism
 global-altruism
 0
+1
+0.7
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+23
+471
+195
+504
+disabled-ratio
+disabled-ratio
+0
+1
+0.15
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+23
+429
+195
+462
+global-conformism
+global-conformism
+0
+1
+0.25
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+24
+345
+196
+378
+entry-ratio
+entry-ratio
+0.05
+1
+0.2
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+24
+263
+196
+296
+normal-speed
+normal-speed
+0.05
 1
 0.5
 0.05
@@ -343,14 +453,14 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-307
-182
-340
-disabled-ratio
-disabled-ratio
-0
-1
+24
+304
+196
+337
+disabled-speed
+disabled-speed
+0.05
+normal-speed
 0.1
 0.05
 1
