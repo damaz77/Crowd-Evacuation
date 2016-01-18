@@ -323,10 +323,10 @@ ticks
 30.0
 
 BUTTON
-33
-167
-96
-200
+32
+48
+95
+81
 NIL
 setup
 NIL
@@ -340,10 +340,10 @@ NIL
 1
 
 BUTTON
-32
-212
-95
-245
+31
+93
+94
+126
 NIL
 go
 T
@@ -378,25 +378,25 @@ PENS
 "pen-3" 1.0 0 -16777216 true "" "if non-altruist-exited > 0 [plot ticks-non-altruist / non-altruist-exited]"
 
 SLIDER
-23
-387
-195
-420
+22
+268
+194
+301
 global-altruism
 global-altruism
 0
 1
-0.7
+0.2
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-23
-471
-195
-504
+22
+352
+194
+385
 disabled-ratio
 disabled-ratio
 0
@@ -408,25 +408,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-23
-429
-195
-462
+22
+310
+194
+343
 global-conformism
 global-conformism
 0
 1
-0.25
+0.85
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-24
-345
-196
-378
+23
+226
+195
+259
 entry-ratio
 entry-ratio
 0.05
@@ -438,25 +438,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-24
-263
-196
-296
+23
+144
+195
+177
 normal-speed
 normal-speed
 0.05
 1
-0.5
+0.9
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-24
-304
-196
-337
+23
+185
+195
+218
 disabled-speed
 disabled-speed
 0.05
