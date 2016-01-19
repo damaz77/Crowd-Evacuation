@@ -1,6 +1,6 @@
 extensions [array table]
 
-globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc global-stats]
+globals [last-x last-y roads walls classes entry-points exit-points grid-x-inc grid-y-inc global-stats]
 
 breed [normal-persons]
 breed [disableds]
@@ -23,15 +23,23 @@ turtles-own
   entry-point-id
 ]
 
-
 to setup
   clear-all
+  setup-classes
   setup-patches
   setup-entry-points
   setup-exit-points
   initialize-global-stats
   set-default-shape turtles "person"
   reset-ticks
+end
+
+to setup-classes
+  set classes table:make
+  table:put classes blue "normals"
+  table:put classes red "disableds"
+  table:put classes orange "altruists"
+  table:put classes black "non-altruists"
 end
 
 
@@ -55,7 +63,7 @@ to setup-entry-points
   let counter 0
   foreach sort entry-points[
     ask ? [
-      set pcolor  green
+      set pcolor green
       if counter mod roads-size = 0 [
         set auto-entry-id auto-entry-id + 1
       ]
@@ -93,22 +101,27 @@ to initialize-global-stats
     let j 1
     while [j <= entry-number] [
       let breeds table:make
+
       let simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
       table:put breeds "normals" simple-stats
+
       set simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
       table:put breeds "disableds" simple-stats
+
       set simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
       table:put breeds "altruists" simple-stats
+
       set simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
       table:put breeds "non-altruists" simple-stats
+
       table:put entries (word "entry" j) breeds
       set j j + 1
     ]
@@ -334,45 +347,20 @@ end
 
 to update-global-stats
   let entry-exit-pair table:get (table:get global-stats (word "exit" exit-id)) (word "entry" entry-point-id)
-  if color = blue [
-    let actual-count table:get (table:get entry-exit-pair "normals") "count"
-    set actual-count actual-count + 1
-    let actual-ticks table:get (table:get entry-exit-pair "normals") "tick-count"
-    set actual-ticks actual-ticks + ticks-count
-    table:put (table:get entry-exit-pair "normals") "count" actual-count
-    table:put (table:get entry-exit-pair "normals") "tick-count" actual-ticks
-  ]
-  if color = red [
-    let actual-count table:get (table:get entry-exit-pair "disableds") "count"
-    set actual-count actual-count + 1
-    let actual-ticks table:get (table:get entry-exit-pair "disableds") "tick-count"
-    set actual-ticks actual-ticks + ticks-count
-    table:put (table:get entry-exit-pair "disableds") "count" actual-count
-    table:put (table:get entry-exit-pair "disableds") "tick-count" actual-ticks
-  ]
-  if color = orange [
-    let actual-count table:get (table:get entry-exit-pair "altruists") "count"
-    set actual-count actual-count + 1
-    let actual-ticks table:get (table:get entry-exit-pair "altruists") "tick-count"
-    set actual-ticks actual-ticks + ticks-count
-    table:put (table:get entry-exit-pair "altruists") "count" actual-count
-    table:put (table:get entry-exit-pair "altruists") "tick-count" actual-ticks
-  ]
-  if color = black [
-    let actual-count table:get (table:get entry-exit-pair "non-altruists") "count"
-    set actual-count actual-count + 1
-    let actual-ticks table:get (table:get entry-exit-pair "non-altruists") "tick-count"
-    set actual-ticks actual-ticks + ticks-count
-    table:put (table:get entry-exit-pair "non-altruists") "count" actual-count
-    table:put (table:get entry-exit-pair "non-altruists") "tick-count" actual-ticks
-  ]
+  let class table:get classes color
+  let actual-count table:get (table:get entry-exit-pair class) "count"
+  set actual-count actual-count + 1
+  let actual-ticks table:get (table:get entry-exit-pair class) "tick-count"
+  set actual-ticks actual-ticks + ticks-count
+  table:put (table:get entry-exit-pair class) "count" actual-count
+  table:put (table:get entry-exit-pair class) "tick-count" actual-ticks
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 235
 31
-770
-587
+560
+377
 -1
 -1
 15.0
@@ -386,9 +374,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-34
+20
 0
-34
+20
 1
 1
 0
@@ -413,10 +401,10 @@ NIL
 1
 
 BUTTON
-29
-249
-92
-282
+32
+172
+95
+205
 NIL
 go
 T
@@ -430,10 +418,10 @@ NIL
 0
 
 SLIDER
-20
-424
-192
-457
+31
+340
+203
+373
 global-altruism
 global-altruism
 0
@@ -445,10 +433,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
-546
-191
-579
+30
+462
+202
+495
 disabled-ratio
 disabled-ratio
 0
@@ -460,25 +448,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-20
-466
-192
-499
+31
+382
+203
+415
 global-conformism
 global-conformism
 0
 1
-0.3
+0.6
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-21
-382
-193
-415
+32
+298
+204
+331
 entry-ratio
 entry-ratio
 0.05
@@ -490,10 +478,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-21
-300
-193
-333
+32
+216
+204
+249
 normal-speed
 normal-speed
 0.05
@@ -505,15 +493,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-21
-341
-193
-374
+32
+257
+204
+290
 disabled-speed
 disabled-speed
 0.05
 normal-speed
-0.3
+0.4
 0.05
 1
 NIL
@@ -528,7 +516,7 @@ roads-size
 roads-size
 1
 9
-5
+3
 2
 1
 NIL
@@ -550,10 +538,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-20
-506
-192
-539
+31
+422
+203
+455
 conformism-radius
 conformism-radius
 1
@@ -569,7 +557,7 @@ PLOT
 148
 1195
 411
-Average Ticks Count
+Average ticks count on selected entry-exit pair
 NIL
 NIL
 0.0
@@ -586,30 +574,30 @@ PENS
 "non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" \n           \n]"
 
 SLIDER
-32
-166
-204
-199
+797
+55
+969
+88
 plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-2
+3
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-31
-205
-203
-238
+796
+94
+968
+127
 plot-exit-number
 plot-exit-number
 1
 n-roads * 2
-2
+3
 1
 1
 NIL
