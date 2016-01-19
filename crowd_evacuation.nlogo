@@ -1,4 +1,6 @@
-globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc]
+extensions [array table]
+
+globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc global-stats]
 
 breed [normal-persons]
 breed [disableds]
@@ -6,7 +8,8 @@ breed [disableds]
 patches-own
 [
   wall
-
+  entry-id
+  exit-id
 ]
 
 turtles-own
@@ -17,6 +20,7 @@ turtles-own
   people-right
   people-up
   ticks-count
+  entry-point-id
 ]
 
 
@@ -25,6 +29,7 @@ to setup
   setup-patches
   setup-entry-points
   setup-exit-points
+  initialize-global-stats
   set-default-shape turtles "person"
   reset-ticks
 end
@@ -44,20 +49,73 @@ to setup-patches
 end
 
 to setup-entry-points
+  let auto-entry-id 0
   set entry-points roads with
     [pxcor = 0 or pycor = 0]
-  ask entry-points [
-    set pcolor green
+  let counter 0
+  foreach sort entry-points[
+    ask ? [
+      set pcolor  green
+      if counter mod roads-size = 0 [
+        set auto-entry-id auto-entry-id + 1
+      ]
+      set entry-id auto-entry-id
+      set counter counter + 1
+      set plabel entry-id
+    ]
   ]
-
 end
 
 to setup-exit-points
-  set exit-points roads with
-  [pxcor = max-pxcor or pycor = max-pycor]
-  ask exit-points [set pcolor red]
+  let auto-exit-id 0
+  set exit-points roads with [pxcor = max-pxcor or pycor = max-pycor]
+  let counter 0
+  foreach sort exit-points[
+    ask ? [
+      set pcolor red
+      if counter mod roads-size = 0 [
+        set auto-exit-id auto-exit-id + 1
+      ]
+      set exit-id auto-exit-id
+      set counter counter + 1
+      set plabel exit-id
+    ]
+  ]
 end
 
+to initialize-global-stats
+  let entry-number 2 * n-roads
+  let exit-number 2 * n-roads
+  set global-stats table:make
+  let i 1
+  while [i <= exit-number] [
+    let entries table:make
+    let j 1
+    while [j <= entry-number] [
+      let breeds table:make
+      let simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "normals" simple-stats
+      set simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "disableds" simple-stats
+      set simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "altruists" simple-stats
+      set simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "non-altruists" simple-stats
+      table:put entries (word "entry" j) breeds
+      set j j + 1
+    ]
+    table:put global-stats (word "exit" i) entries
+    set i i + 1
+  ]
+end
 
 to go
   let entry one-of entry-points with [count turtles-at 0 0 = 0]
@@ -74,6 +132,7 @@ to go
           set altruism -1.0
           set conformism global-conformism
           set ticks-count 0
+          set entry-point-id entry-id
         ]
       ]
       [
@@ -86,6 +145,7 @@ to go
           set altruism global-altruism
           set conformism global-conformism
           set ticks-count 0
+          set entry-point-id entry-id
         ]
       ]
     ]
@@ -243,7 +303,6 @@ to count-people-to-the-right
   set people-right 0
   let positions-checked 0
   while [positions-checked < conformism-radius] [
-    ;;controllo muri
     if is-patch? patch-at (positions-checked + 1) 0 [
       if count [turtles-at 0 0] of patch-at (positions-checked + 1) 0 = 1[
         set people-right people-right + 1
@@ -257,7 +316,6 @@ to count-people-up
   set people-up 0
   let positions-checked 0
   while [positions-checked < conformism-radius] [
-    ;;controllo muri
     if is-patch? patch-at 0 (positions-checked + 1) [
       if count [turtles-at 0 0] of patch-at 0 (positions-checked + 1) = 1[
         set people-up people-up + 1
@@ -269,15 +327,52 @@ end
 
 to check-if-exit
   if member? patch-here exit-points[
+    update-global-stats
     die
+  ]
+end
+
+to update-global-stats
+  let entry-exit-pair table:get (table:get global-stats (word "exit" exit-id)) (word "entry" entry-point-id)
+  if color = blue [
+    let actual-count table:get (table:get entry-exit-pair "normals") "count"
+    set actual-count actual-count + 1
+    let actual-ticks table:get (table:get entry-exit-pair "normals") "tick-count"
+    set actual-ticks actual-ticks + ticks-count
+    table:put (table:get entry-exit-pair "normals") "count" actual-count
+    table:put (table:get entry-exit-pair "normals") "tick-count" actual-ticks
+  ]
+  if color = red [
+    let actual-count table:get (table:get entry-exit-pair "disableds") "count"
+    set actual-count actual-count + 1
+    let actual-ticks table:get (table:get entry-exit-pair "disableds") "tick-count"
+    set actual-ticks actual-ticks + ticks-count
+    table:put (table:get entry-exit-pair "disableds") "count" actual-count
+    table:put (table:get entry-exit-pair "disableds") "tick-count" actual-ticks
+  ]
+  if color = orange [
+    let actual-count table:get (table:get entry-exit-pair "altruists") "count"
+    set actual-count actual-count + 1
+    let actual-ticks table:get (table:get entry-exit-pair "altruists") "tick-count"
+    set actual-ticks actual-ticks + ticks-count
+    table:put (table:get entry-exit-pair "altruists") "count" actual-count
+    table:put (table:get entry-exit-pair "altruists") "tick-count" actual-ticks
+  ]
+  if color = black [
+    let actual-count table:get (table:get entry-exit-pair "non-altruists") "count"
+    set actual-count actual-count + 1
+    let actual-ticks table:get (table:get entry-exit-pair "non-altruists") "tick-count"
+    set actual-ticks actual-ticks + ticks-count
+    table:put (table:get entry-exit-pair "non-altruists") "count" actual-count
+    table:put (table:get entry-exit-pair "non-altruists") "tick-count" actual-ticks
   ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 235
 31
-665
-482
+770
+587
 -1
 -1
 15.0
@@ -291,9 +386,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-27
+34
 0
-27
+34
 1
 1
 0
@@ -318,10 +413,10 @@ NIL
 1
 
 BUTTON
-30
-217
-93
-250
+29
+249
+92
+282
 NIL
 go
 T
@@ -335,25 +430,25 @@ NIL
 0
 
 SLIDER
-21
-392
-193
-425
+20
+424
+192
+457
 global-altruism
 global-altruism
 0
 1
-0.7
+0.3
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-20
-514
-192
-547
+19
+546
+191
+579
 disabled-ratio
 disabled-ratio
 0
@@ -365,40 +460,40 @@ NIL
 HORIZONTAL
 
 SLIDER
-21
-434
-193
-467
+20
+466
+192
+499
 global-conformism
 global-conformism
 0
 1
-0.35
+0.3
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-22
-350
-194
-383
+21
+382
+193
+415
 entry-ratio
 entry-ratio
 0.05
 1
-0.75
+0.65
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-22
-268
-194
-301
+21
+300
+193
+333
 normal-speed
 normal-speed
 0.05
@@ -410,40 +505,40 @@ NIL
 HORIZONTAL
 
 SLIDER
-22
-309
-194
-342
+21
+341
+193
+374
 disabled-speed
 disabled-speed
 0.05
 normal-speed
-0.4
+0.3
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-26
-113
-198
-146
+32
+87
+204
+120
 roads-size
 roads-size
 1
-10
-4
-1
+9
+5
+2
 1
 NIL
 HORIZONTAL
 
 SLIDER
-26
-165
-198
-198
+32
+126
+204
+159
 n-roads
 n-roads
 1
@@ -455,15 +550,66 @@ NIL
 HORIZONTAL
 
 SLIDER
-21
-474
-193
-507
+20
+506
+192
+539
 conformism-radius
 conformism-radius
 1
 10
 5
+1
+1
+NIL
+HORIZONTAL
+
+PLOT
+797
+148
+1195
+411
+Average Ticks Count
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"normals" 1.0 0 -13345367 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"normals\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"normals\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"normals\" \"count\" \n           \n]"
+"disableds" 1.0 0 -2674135 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" \n           \n]"
+"altruists" 1.0 0 -955883 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"count\" \n           \n]"
+"non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" \n           \n]"
+
+SLIDER
+32
+166
+204
+199
+plot-entry-number
+plot-entry-number
+1
+n-roads * 2
+2
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+31
+205
+203
+238
+plot-exit-number
+plot-exit-number
+1
+n-roads * 2
+2
 1
 1
 NIL
