@@ -1,4 +1,4 @@
-globals [last-x last-y roads entry-points exit-points grid-x-inc grid-y-inc ticks-normals ticks-altruist ticks-non-altruist normal-exited
+globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc ticks-normals ticks-altruist ticks-non-altruist normal-exited
   altruist-exited non-altruist-exited ticks-disabled disabled-exited]
 
 breed [normal-persons]
@@ -18,6 +18,7 @@ turtles-own
   people-up
   ticks-count
 ]
+
 
 to setup
   clear-all
@@ -41,31 +42,33 @@ to setup-parameters
 end
 
 to setup-patches
+  resize-world 0 (2 * n-roads + 1) * roads-size - 1 0 (2 * n-roads + 1) * roads-size - 1
   ask patches
   [
-    set pcolor brown + 3
-    set wall 1
+    set pcolor white
+    set wall 0
   ]
-  set grid-x-inc 5
-  set grid-y-inc 5
-  set roads patches with
-    [(floor((pxcor + max-pxcor - floor(grid-x-inc)) mod grid-x-inc) = 0) or
-    (floor((pycor + max-pycor) mod grid-y-inc) = 0)]
-  ask roads [ set pcolor white set wall 0]
+  set walls patches with
+    [(floor(pxcor / roads-size)) mod 2 = 0 and (floor(pycor / roads-size)) mod 2 = 0 ]
+  ask walls [ set pcolor brown + 2 set wall 1]
+  set roads patches with [pcolor = white]
 end
 
 to setup-entry-points
   set entry-points roads with
-    [(pxcor = 0 and (pycor = max-pycor / 2 or pycor = max-pycor / 2 + grid-y-inc or pycor = max-pycor / 2 - grid-y-inc)) or
-     (pycor = 0 and (pxcor = max-pxcor / 2 or pxcor = max-pxcor / 2 + grid-x-inc or pxcor = max-pxcor / 2 - grid-x-inc))]
-  ask entry-points [ set pcolor green]
+    [pxcor = 0 or pycor = 0]
+  ask entry-points [
+    set pcolor green
+  ]
+
 end
 
 to setup-exit-points
   set exit-points roads with
-  [pxcor = max-pxcor and pycor = max-pycor]
+  [pxcor = max-pxcor or pycor = max-pycor]
   ask exit-points [set pcolor red]
 end
+
 
 to go
   let entry one-of entry-points with [count turtles-at 0 0 = 0]
@@ -253,8 +256,11 @@ to count-people-to-the-right
   set people-right 0
   let positions-checked 0
   while [positions-checked < grid-x-inc] [
-    if count [turtles-at 0 0] of patch-at (positions-checked + 1) 0 = 1[
-      set people-right people-right + 1
+    ;;controllo muri
+    if is-patch? patch-at (positions-checked + 1) 0 [
+      if count [turtles-at 0 0] of patch-at (positions-checked + 1) 0 = 1[
+        set people-right people-right + 1
+      ]
     ]
     set positions-checked positions-checked + 1
   ]
@@ -264,8 +270,11 @@ to count-people-up
   set people-up 0
   let positions-checked 0
   while [positions-checked < grid-x-inc] [
-    if count [turtles-at 0 0] of patch-at 0 (positions-checked + 1) = 1[
-      set people-up people-up + 1
+    ;;controllo muri
+    if is-patch? patch-at 0 (positions-checked + 1) [
+      if count [turtles-at 0 0] of patch-at 0 (positions-checked + 1) = 1[
+        set people-up people-up + 1
+      ]
     ]
     set positions-checked positions-checked + 1
   ]
@@ -296,10 +305,10 @@ to check-if-exit
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
-10
-685
-506
+235
+31
+662
+479
 -1
 -1
 15.0
@@ -313,9 +322,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-30
+27
 0
-30
+27
 1
 1
 0
@@ -340,10 +349,10 @@ NIL
 1
 
 BUTTON
-31
+30
+217
 93
-94
-126
+250
 NIL
 go
 T
@@ -357,10 +366,10 @@ NIL
 0
 
 PLOT
-755
-116
-1087
-345
+699
+115
+1031
+344
 Average Ticks Count
 NIL
 NIL
@@ -378,70 +387,70 @@ PENS
 "pen-3" 1.0 0 -16777216 true "" "if non-altruist-exited > 0 [plot ticks-non-altruist / non-altruist-exited]"
 
 SLIDER
+21
+392
+193
+425
+global-altruism
+global-altruism
+0
+1
+0.25
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+21
+476
+193
+509
+disabled-ratio
+disabled-ratio
+0
+1
+0.1
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+21
+434
+193
+467
+global-conformism
+global-conformism
+0
+1
+0.3
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+22
+350
+194
+383
+entry-ratio
+entry-ratio
+0.05
+1
+0.2
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
 22
 268
 194
 301
-global-altruism
-global-altruism
-0
-1
-0.2
-0.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-22
-352
-194
-385
-disabled-ratio
-disabled-ratio
-0
-1
-0.15
-0.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-22
-310
-194
-343
-global-conformism
-global-conformism
-0
-1
-0.85
-0.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-23
-226
-195
-259
-entry-ratio
-entry-ratio
-0.05
-1
-0.2
-0.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-23
-144
-195
-177
 normal-speed
 normal-speed
 0.05
@@ -453,16 +462,46 @@ NIL
 HORIZONTAL
 
 SLIDER
-23
-185
-195
-218
+22
+309
+194
+342
 disabled-speed
 disabled-speed
 0.05
 normal-speed
-0.1
+0.4
 0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+23
+104
+195
+137
+roads-size
+roads-size
+1
+10
+4
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+26
+165
+198
+198
+n-roads
+n-roads
+1
+10
+3
+1
 1
 NIL
 HORIZONTAL
