@@ -1,5 +1,4 @@
-globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc ticks-normals ticks-altruist ticks-non-altruist normal-exited
-  altruist-exited non-altruist-exited ticks-disabled disabled-exited]
+globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc]
 
 breed [normal-persons]
 breed [disableds]
@@ -7,6 +6,7 @@ breed [disableds]
 patches-own
 [
   wall
+
 ]
 
 turtles-own
@@ -22,7 +22,6 @@ turtles-own
 
 to setup
   clear-all
-  setup-parameters
   setup-patches
   setup-entry-points
   setup-exit-points
@@ -30,16 +29,6 @@ to setup
   reset-ticks
 end
 
-to setup-parameters
-  set ticks-normals 0
-  set ticks-disabled 0
-  set ticks-altruist 0
-  set ticks-non-altruist 0
-  set normal-exited 0
-  set disabled-exited 0
-  set altruist-exited 0
-  set non-altruist-exited 0
-end
 
 to setup-patches
   resize-world 0 (2 * n-roads + 1) * roads-size - 1 0 (2 * n-roads + 1) * roads-size - 1
@@ -190,10 +179,7 @@ to do-random-feasible-move
     [
       ifelse (right-feasible and up-feasible)[   ;;qua valuto il conformismo
         count-people-to-the-right
-
         count-people-up
-        ;;set label (word people-right "," people-up)
-        set label-color red
         let more-conformist-way ""
         ifelse people-right = people-up[
           set more-conformist-way "either"
@@ -252,10 +238,11 @@ to go-up
   setxy [xcor] of self [ycor] of self + 1
 end
 
+;;considerare anche le diagonali
 to count-people-to-the-right
   set people-right 0
   let positions-checked 0
-  while [positions-checked < grid-x-inc] [
+  while [positions-checked < conformism-radius] [
     ;;controllo muri
     if is-patch? patch-at (positions-checked + 1) 0 [
       if count [turtles-at 0 0] of patch-at (positions-checked + 1) 0 = 1[
@@ -269,7 +256,7 @@ end
 to count-people-up
   set people-up 0
   let positions-checked 0
-  while [positions-checked < grid-x-inc] [
+  while [positions-checked < conformism-radius] [
     ;;controllo muri
     if is-patch? patch-at 0 (positions-checked + 1) [
       if count [turtles-at 0 0] of patch-at 0 (positions-checked + 1) = 1[
@@ -282,24 +269,6 @@ end
 
 to check-if-exit
   if member? patch-here exit-points[
-    ifelse member? self normal-persons[
-      if color = blue[
-        set ticks-normals ticks-normals + ticks-count
-        set normal-exited normal-exited + 1
-      ]
-      if color = orange[
-        set ticks-altruist ticks-altruist + ticks-count
-        set altruist-exited altruist-exited + 1
-      ]
-      if color = black[
-        set ticks-non-altruist ticks-non-altruist + ticks-count
-        set non-altruist-exited non-altruist-exited + 1
-      ]
-    ]
-    [
-      set ticks-disabled ticks-disabled + ticks-count
-      set disabled-exited disabled-exited + 1
-    ]
     die
   ]
 end
@@ -307,8 +276,8 @@ end
 GRAPHICS-WINDOW
 235
 31
-662
-479
+665
+482
 -1
 -1
 15.0
@@ -365,27 +334,6 @@ NIL
 NIL
 0
 
-PLOT
-699
-115
-1031
-344
-Average Ticks Count
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -13345367 true "" "if normal-exited > 0 [plot ticks-normals / normal-exited]"
-"pen-1" 1.0 0 -2674135 true "" "if disabled-exited > 0 [plot ticks-disabled / disabled-exited]"
-"pen-2" 1.0 0 -955883 true "" "if altruist-exited > 0 [plot ticks-altruist / altruist-exited]"
-"pen-3" 1.0 0 -16777216 true "" "if non-altruist-exited > 0 [plot ticks-non-altruist / non-altruist-exited]"
-
 SLIDER
 21
 392
@@ -395,17 +343,17 @@ global-altruism
 global-altruism
 0
 1
-0.25
+0.7
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-21
-476
-193
-509
+20
+514
+192
+547
 disabled-ratio
 disabled-ratio
 0
@@ -425,7 +373,7 @@ global-conformism
 global-conformism
 0
 1
-0.3
+0.35
 0.05
 1
 NIL
@@ -440,7 +388,7 @@ entry-ratio
 entry-ratio
 0.05
 1
-0.2
+0.75
 0.05
 1
 NIL
@@ -455,7 +403,7 @@ normal-speed
 normal-speed
 0.05
 1
-0.9
+0.8
 0.05
 1
 NIL
@@ -477,10 +425,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-23
-104
-195
-137
+26
+113
+198
+146
 roads-size
 roads-size
 1
@@ -501,6 +449,21 @@ n-roads
 1
 10
 3
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+21
+474
+193
+507
+conformism-radius
+conformism-radius
+1
+10
+5
 1
 1
 NIL
