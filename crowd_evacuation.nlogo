@@ -246,8 +246,8 @@ to do-random-feasible-move
     ]
 
 
-   ;;qua valuto il conformismo
     ifelse (right-feasible and up-feasible)[
+      ;; now i evaluate the conformism, if i have to
       ifelse evaluate-conformism[
         ifelse random-float 1 < conformism[ ;;i'm conformist
           ifelse right-people > up-people [
@@ -290,37 +290,11 @@ to go-right
   setxy [xcor] of self + 1  [ycor] of self
 end
 
+
 to go-up
   setxy [xcor] of self [ycor] of self + 1
 end
 
-
-;;considerare anche le diagonali
-to count-people-to-the-right
-  set people-right 0
-  let positions-checked 0
-  while [positions-checked < conformism-radius] [
-    if is-patch? patch-at (positions-checked + 1) 0 [
-      if count [turtles-at 0 0] of patch-at (positions-checked + 1) 0 = 1[
-        set people-right people-right + 1
-      ]
-    ]
-    set positions-checked positions-checked + 1
-  ]
-end
-
-to count-people-up
-  set people-up 0
-  let positions-checked 0
-  while [positions-checked < conformism-radius] [
-    if is-patch? patch-at 0 (positions-checked + 1) [
-      if count [turtles-at 0 0] of patch-at 0 (positions-checked + 1) = 1[
-        set people-up people-up + 1
-      ]
-    ]
-    set positions-checked positions-checked + 1
-  ]
-end
 
 to check-if-exit
   if member? patch-here exit-points[
