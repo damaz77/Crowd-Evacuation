@@ -131,9 +131,9 @@ to initialize-global-stats
 end
 
 to go
-  foreach sort(entry-points with [count turtles-at 0 0 = 0])[
+  foreach sort(entry-points with [count turtles-at 0 0 = 0])[ ;;foreach free entry-point
     if is-patch? ?[
-      if random-float 1 < entry-ratio[
+      if random-float 1 < entry-ratio[ ;;i create a turle
         ifelse random-float 1 < disabled-ratio[
           create-disableds 1
           [
@@ -188,7 +188,7 @@ to do-random-feasible-move
     if any? patches-with-disabled-neighbor [ ;;if there is a disabled in the neighborhood
       ifelse random-float 1 < altruism [ ;;if i am altruist
         let random-disabled one-of patches-with-disabled-neighbor ;;pick a random disabled
-        ask random-disabled [ ;;and help him
+        ask random-disabled [ ;;and "help" him
           ask disableds-here [
             die
           ]
@@ -222,46 +222,56 @@ to do-random-feasible-move
       ]
     ]
 
-   ;;qua valuto il conformismo
-   ifelse (right-feasible and up-feasible)[
-     count-people-to-the-right
-     count-people-up
-     let more-conformist-way ""
-     ifelse people-right = people-up[
-       set more-conformist-way "either"
-     ]
-     [
-       ifelse people-right > people-up [
-         set more-conformist-way "right"
-       ]
-       [
-         set more-conformist-way "up"
-       ]
+
+    let conformism-neighbors turtles in-radius conformism-radius
+    let right-people 0
+    let up-people 0
+    foreach sort(conformism-neighbors)[
+      if [xcor] of ? != xcor and [ycor] of ? != ycor [ ;;if i'm not the neighbor (lol)
+        let right-distance [xcor] of ? - xcor          let up-distance [ycor] of ? - xcor
+        if right-distance != up-distance [ ;;i dont count people on the diagonal
+          ifelse right-distance > up-distance [
+            set right-people right-people + 1
+          ]
+          [
+            set up-people up-people + 1
+          ]
+        ]
       ]
-      ifelse more-conformist-way = "either"[
+    ]
+
+    let evaluate-conformism true
+    if up-people = right-people [ ;;if there is not a more conformist way
+      set evaluate-conformism false
+    ]
+
+
+   ;;qua valuto il conformismo
+    ifelse (right-feasible and up-feasible)[
+      ifelse evaluate-conformism[
+        ifelse random-float 1 < conformism[ ;;i'm conformist
+          ifelse right-people > up-people [
+            go-right
+          ]
+          [
+            go-up
+          ]
+        ]
+        [
+          ifelse right-people > up-people [ ;;i'm anticonformist
+            go-up
+          ]
+          [
+            go-right
+          ]
+        ]
+      ]
+      [
         ifelse random-float 1 < 0.5[
           go-up
         ]
         [
           go-right
-        ]
-      ]
-      [
-        ifelse more-conformist-way = "right" [
-          ifelse random-float 1 < conformism [
-            go-right
-          ]
-          [
-            go-up
-          ]
-        ]
-        [
-          ifelse random-float 1 < conformism [ ;;more-conformist-way = "UP"
-            go-up
-          ]
-          [
-            go-right
-          ]
         ]
       ]
     ]
@@ -333,8 +343,8 @@ end
 GRAPHICS-WINDOW
 235
 31
-560
-377
+740
+557
 -1
 -1
 15.0
@@ -348,9 +358,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-20
+32
 0
-20
+32
 1
 1
 0
@@ -400,7 +410,7 @@ global-altruism
 global-altruism
 0
 1
-0.25
+0.6
 0.05
 1
 NIL
@@ -445,7 +455,7 @@ entry-ratio
 entry-ratio
 0.05
 1
-0.1
+0.2
 0.05
 1
 NIL
@@ -505,7 +515,7 @@ n-roads
 n-roads
 1
 10
-3
+5
 1
 1
 NIL
@@ -520,7 +530,7 @@ conformism-radius
 conformism-radius
 1
 10
-5
+4
 1
 1
 NIL
