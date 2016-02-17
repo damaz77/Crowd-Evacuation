@@ -401,10 +401,10 @@ NIL
 1
 
 BUTTON
-32
-172
-95
-205
+35
+233
+98
+266
 NIL
 go
 T
@@ -418,10 +418,10 @@ NIL
 0
 
 SLIDER
-31
-340
-203
-373
+34
+401
+206
+434
 global-altruism
 global-altruism
 0
@@ -433,10 +433,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-30
-462
-202
-495
+33
+523
+205
+556
 disabled-ratio
 disabled-ratio
 0
@@ -448,10 +448,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-31
-382
-203
-415
+34
+443
+206
+476
 global-conformism
 global-conformism
 0
@@ -463,10 +463,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-298
-204
-331
+35
+359
+207
+392
 entry-ratio
 entry-ratio
 0.05
@@ -478,10 +478,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-216
-204
-249
+35
+277
+207
+310
 normal-speed
 normal-speed
 0.05
@@ -493,10 +493,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-257
-204
-290
+35
+318
+207
+351
 disabled-speed
 disabled-speed
 0.05
@@ -538,10 +538,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-31
-422
-203
-455
+34
+483
+206
+516
 conformism-radius
 conformism-radius
 1
@@ -598,6 +598,21 @@ plot-exit-number
 1
 n-roads * 2
 3
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+31
+168
+203
+201
+one-exit?
+one-exit?
+0
+1
+0
 1
 1
 NIL
