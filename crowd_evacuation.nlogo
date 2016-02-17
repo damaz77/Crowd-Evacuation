@@ -131,34 +131,35 @@ to initialize-global-stats
 end
 
 to go
-  let entry one-of entry-points with [count turtles-at 0 0 = 0]
-  if is-patch? entry[
-    if random-float 1 < entry-ratio[
-      ifelse random-float 1 < disabled-ratio[
-        create-disableds 1
-        [
-          set xcor [pxcor] of entry
-          set ycor [pycor] of entry
-          set shape "x"
-          set speed disabled-speed
-          set color red
-          set altruism -1.0
-          set conformism global-conformism
-          set ticks-count 0
-          set entry-point-id entry-id
+  foreach sort(entry-points with [count turtles-at 0 0 = 0])[
+    if is-patch? ?[
+      if random-float 1 < entry-ratio[
+        ifelse random-float 1 < disabled-ratio[
+          create-disableds 1
+          [
+            set xcor [pxcor] of ?
+            set ycor [pycor] of ?
+            set shape "x"
+            set speed disabled-speed
+            set color red
+            set altruism -1.0
+            set conformism global-conformism
+            set ticks-count 0
+            set entry-point-id entry-id
+          ]
         ]
-      ]
-      [
-        create-normal-persons 1
         [
-          set xcor [pxcor] of entry
-          set ycor [pycor] of entry
-          set speed normal-speed
-          set color blue
-          set altruism global-altruism
-          set conformism global-conformism
-          set ticks-count 0
-          set entry-point-id entry-id
+          create-normal-persons 1
+          [
+            set xcor [pxcor] of ?
+            set ycor [pycor] of ?
+            set speed normal-speed
+            set color blue
+            set altruism global-altruism
+            set conformism global-conformism
+            set ticks-count 0
+            set entry-point-id entry-id
+          ]
         ]
       ]
     ]
@@ -181,127 +182,99 @@ to do-random-feasible-move
     let right-altruism-possible false
     let up-altruism-possible false
     let neighbors-disabled 0
+
+
+    let patches-with-disabled-neighbor neighbors with [count [disableds-at 0 0] of patch-at 0 0 > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
+    if any? patches-with-disabled-neighbor [ ;;if there is a disabled in the neighborhood
+      ifelse random-float 1 < altruism [ ;;if i am altruist
+        let random-disabled one-of patches-with-disabled-neighbor ;;pick a random disabled
+        ask random-disabled [ ;;and help him
+          ask disableds-here [
+            die
+          ]
+        ]
+        set speed (disabled-speed + normal-speed) / 2 ;;now i'm slower
+        set color orange
+        set altruism 0.0 ;;and i cant help anybody else
+      ]
+      [
+        if altruism >= 0 and color != orange [ ;;if i'm a bad person, i become black
+          set altruism 0.0 ;;no chance of redemption
+          set color black
+        ]
+      ]
+    ]
+
+    ;;feasibility of up and right moves
     if is-patch? patch-at 1 0 [
       if [wall] of patch-at 1 0 = 0 [
-        ifelse count [turtles-at 0 0] of patch-at 1 0 = 0[
+        if count [turtles-at 0 0] of patch-at 1 0 = 0[
           set right-feasible true
-        ]
-        [
-          if count [disableds-at 0 0] of patch-at 1 0 > 0[
-            set right-altruism-possible true
-            set neighbors-disabled neighbors-disabled + 1
-          ]
         ]
       ]
     ]
 
     if is-patch? patch-at 0 1 [
       if [wall] of patch-at 0 1 = 0 [
-        ifelse count [turtles-at 0 0] of patch-at 0 1 = 0[
+        if count [turtles-at 0 0] of patch-at 0 1 = 0[
           set up-feasible true
-        ]
-        [
-          if count [disableds-at 0 0] of patch-at 0 1 > 0[
-            set up-altruism-possible true
-            set neighbors-disabled neighbors-disabled + 1
-          ]
         ]
       ]
     ]
-    ifelse neighbors-disabled > 0 [
-      ifelse random-float 1 < altruism [
-        set speed (disabled-speed + normal-speed) / 2
-        set color orange
-        set altruism 0.0
-        ifelse right-altruism-possible and up-altruism-possible [
-          ifelse random 1 < 0.5 [
-            ask disableds-at 1 0[
-              die
-            ]
+
+   ;;qua valuto il conformismo
+   ifelse (right-feasible and up-feasible)[
+     count-people-to-the-right
+     count-people-up
+     let more-conformist-way ""
+     ifelse people-right = people-up[
+       set more-conformist-way "either"
+     ]
+     [
+       ifelse people-right > people-up [
+         set more-conformist-way "right"
+       ]
+       [
+         set more-conformist-way "up"
+       ]
+      ]
+      ifelse more-conformist-way = "either"[
+        ifelse random-float 1 < 0.5[
+          go-up
+        ]
+        [
+          go-right
+        ]
+      ]
+      [
+        ifelse more-conformist-way = "right" [
+          ifelse random-float 1 < conformism [
             go-right
           ]
           [
-            ask disableds-at 0 1[
-              die
-            ]
             go-up
           ]
         ]
         [
-          if up-altruism-possible [
-            ask disableds-at 0 1[
-              die
-            ]
+          ifelse random-float 1 < conformism [ ;;more-conformist-way = "UP"
             go-up
           ]
-          if right-altruism-possible [
-            ask disableds-at 1 0[
-              die
-            ]
+          [
             go-right
           ]
-        ]
-      ]
-      [
-        if altruism >= 0 and color != orange [
-          set altruism 0.0
-          set color black
         ]
       ]
     ]
     [
-      ifelse (right-feasible and up-feasible)[   ;;qua valuto il conformismo
-        count-people-to-the-right
-        count-people-up
-        let more-conformist-way ""
-        ifelse people-right = people-up[
-          set more-conformist-way "either"
-        ]
-        [
-          ifelse people-right > people-up [
-            set more-conformist-way "right"
-          ]
-          [
-            set more-conformist-way "up"
-          ]
-        ]
-        ifelse more-conformist-way = "either"[
-          ifelse random-float 1 < 0.5[
-            go-up
-          ]
-          [
-            go-right
-          ]
-        ]
-        [
-          ifelse more-conformist-way = "right" [
-            ifelse random-float 1 < conformism [
-              go-right
-            ]
-            [
-              go-up
-            ]
-          ]
-          [
-            ifelse random-float 1 < conformism [ ;;more-conformist-way = "UP"
-              go-up
-            ]
-            [
-              go-right
-            ]
-          ]
-        ]
+      if up-feasible [
+        go-up
       ]
-      [
-        if up-feasible [
-          go-up
-        ]
-        if right-feasible[
-          go-right
-        ]
+      if right-feasible[
+        go-right
       ]
     ]
 end
+
 
 to go-right
   setxy [xcor] of self + 1  [ycor] of self
@@ -310,6 +283,7 @@ end
 to go-up
   setxy [xcor] of self [ycor] of self + 1
 end
+
 
 ;;considerare anche le diagonali
 to count-people-to-the-right
@@ -426,7 +400,7 @@ global-altruism
 global-altruism
 0
 1
-0.3
+0.25
 0.05
 1
 NIL
@@ -471,7 +445,7 @@ entry-ratio
 entry-ratio
 0.05
 1
-0.65
+0.1
 0.05
 1
 NIL
@@ -598,21 +572,6 @@ plot-exit-number
 1
 n-roads * 2
 3
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-31
-168
-203
-201
-one-exit?
-one-exit?
-0
-1
-0
 1
 1
 NIL
