@@ -1,6 +1,6 @@
 extensions [array table]
 
-globals [last-x last-y roads walls classes entry-points exit-points grid-x-inc grid-y-inc global-stats]
+globals [last-x last-y roads walls classes entry-points exit-points grid-x-inc grid-y-inc global-stats two-exits]
 
 breed [normal-persons]
 breed [disableds]
@@ -103,6 +103,7 @@ end
 to initialize-global-stats
   let entry-number 2 * n-roads
   let exit-number 2 * n-roads
+  set two-exits only-2-exits?
   set global-stats table:make
   let i 1
   while [i <= exit-number] [
@@ -140,6 +141,7 @@ to initialize-global-stats
 end
 
 to go
+ ;; if count turtles <= 1[ ;;TODO
   foreach sort(entry-points with [count turtles-at 0 0 = 0])[ ;;foreach free entry-point
     if is-patch? ?[
       if random-float 1 < entry-ratio[ ;;i create a turle
@@ -168,16 +170,20 @@ to go
             set conformism global-conformism
             set ticks-count 0
             set entry-point-id entry-id
+            ;;set label who
+            ;;set label-color red
           ]
         ]
       ]
     ]
+ ;; ]
   ]
 
   ask turtles[
     if random-float 1 < speed[
-      ifelse only-2-exits? [
-        do-random-feasible-move ;; TODO do-smart-feasible-move
+      ifelse two-exits [
+        do-smart-feasible-move
+        ;;do-random-feasible-move ;; TODO do-smart-feasible-move
       ]
       [
         do-random-feasible-move
@@ -189,14 +195,7 @@ to go
   tick
 end
 
-
-to do-random-feasible-move
-    let right-feasible false
-    let up-feasible false
-    let right-altruism-possible false
-    let up-altruism-possible false
-    let neighbors-disabled 0
-
+to try-to-help-a-disabled
     let patches-with-disabled-neighbor neighbors with [count [disableds-here] of patch-at 0 0 > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
     if any? patches-with-disabled-neighbor [ ;;if there is a disabled in the neighborhood
       ifelse random-float 1 < altruism [ ;;if i am altruist
@@ -217,6 +216,129 @@ to do-random-feasible-move
         ]
       ]
     ]
+end
+
+to do-smart-feasible-move
+    let right-feasible false
+    let up-feasible false
+    let left-feasible false
+    let down-feasible false
+
+    try-to-help-a-disabled
+
+    ;;feasibility moves
+    if is-patch? patch-at 1 0 [
+      if [wall] of patch-at 1 0 = 0 [
+        if count [turtles-at 0 0] of patch-at 1 0 = 0[
+          set right-feasible true
+        ]
+      ]
+    ]
+
+    if is-patch? patch-at 0 1 [
+      if [wall] of patch-at 0 1 = 0 [
+        if count [turtles-at 0 0] of patch-at 0 1 = 0[
+          set up-feasible true
+        ]
+      ]
+    ]
+
+    if is-patch? patch-at 0 -1 [
+      if [wall] of patch-at 0 -1 = 0 [
+        if count [turtles-at 0 0] of patch-at 0 -1 = 0[
+          set down-feasible true
+        ]
+      ]
+    ]
+
+    if is-patch? patch-at -1 0 [
+      if [wall] of patch-at -1 0 = 0 [
+        if count [turtles-at 0 0] of patch-at -1 0 = 0[
+          set left-feasible true
+        ]
+      ]
+    ]
+
+    let nearest-exit one-of exit-points with-min [distance myself] ;;should return the nearest exit point to the moving turtle
+    ;;ask nearest-exit [set pcolor green]
+    face nearest-exit
+    let preferred-move "both"
+   ;; show heading
+    ifelse heading >= 0 and heading <= 90[
+    ifelse heading > 45  [ ;;todo, anche direzioni finora non ammissibili
+      set preferred-move "right"
+    ]
+    [
+      if heading < 45 [
+        set preferred-move "up"
+      ]
+    ]
+   ;; show preferred-move
+    if preferred-move = "right" [
+      ifelse right-feasible [
+        go-right
+      ]
+      [
+        if up-feasible[
+          go-up
+        ]
+      ]
+    ]
+
+    if preferred-move = "up" [
+      ifelse up-feasible [
+        go-up
+      ]
+      [
+        if right-feasible[
+          go-right
+        ]
+      ]
+    ]
+
+    if preferred-move = "both" [
+      ifelse right-feasible and up-feasible [
+        ifelse random-float 1 < 0.5[
+          go-up
+        ]
+        [
+          go-right
+        ]
+      ]
+      [
+        if up-feasible [
+          go-up
+        ]
+        if right-feasible[
+          go-right
+        ]
+      ]
+    ]
+    ]
+    [
+      if heading > 90 and heading <= 270 [
+        if down-feasible[
+          go-down
+        ]
+      ]
+      if heading > 270 and heading <= 360[
+        if left-feasible[
+          go-left
+        ]
+      ]
+    ]
+
+
+end
+
+to do-random-feasible-move
+    let right-feasible false
+    let up-feasible false
+    let right-altruism-possible false
+    let up-altruism-possible false
+    let neighbors-disabled 0
+
+    try-to-help-a-disabled
 
     ;;feasibility of up and right moves
     if is-patch? patch-at 1 0 [
@@ -306,6 +428,14 @@ end
 
 to go-up
   setxy [xcor] of self [ycor] of self + 1
+end
+
+to go-down
+  setxy [xcor] of self [ycor] of self - 1
+end
+
+to go-left
+  setxy [xcor] of self - 1  [ycor] of self
 end
 
 
@@ -427,7 +557,7 @@ global-conformism
 global-conformism
 0
 1
-0.6
+0.75
 0.05
 1
 NIL
@@ -581,7 +711,7 @@ SWITCH
 207
 only-2-exits?
 only-2-exits?
-1
+0
 1
 -1000
 
