@@ -76,7 +76,16 @@ end
 
 to setup-exit-points
   let auto-exit-id 0
-  set exit-points roads with [pxcor = max-pxcor or pycor = max-pycor]
+  if only-2-exits? [ ;;check if i have only 2 exits
+    set walls patches with
+      [((max-pycor - roads-size < pycor) and not (pxcor > max-pxcor / 2 - roads-size / 2 and pxcor < max-pxcor / 2 + roads-size / 2))
+        or
+       ((max-pxcor - roads-size < pxcor) and not (pycor > max-pycor / 2 - roads-size / 2 and pycor < max-pycor / 2 + roads-size / 2))
+        ]
+    ask walls [ set pcolor brown + 2 set wall 1]
+  ]
+    set exit-points roads with [(pxcor = max-pxcor or pycor = max-pycor) and wall = 0 ]
+
   let counter 0
   foreach sort exit-points[
     ask ? [
@@ -167,7 +176,12 @@ to go
 
   ask turtles[
     if random-float 1 < speed[
-      do-random-feasible-move
+      ifelse only-2-exits? [
+        do-random-feasible-move ;; TODO do-smart-feasible-move
+      ]
+      [
+        do-random-feasible-move
+      ]
       check-if-exit
     ]
     set ticks-count ticks-count + 1
@@ -183,8 +197,7 @@ to do-random-feasible-move
     let up-altruism-possible false
     let neighbors-disabled 0
 
-
-    let patches-with-disabled-neighbor neighbors with [count [disableds-at 0 0] of patch-at 0 0 > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
+    let patches-with-disabled-neighbor neighbors with [count [disableds-here] of patch-at 0 0 > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
     if any? patches-with-disabled-neighbor [ ;;if there is a disabled in the neighborhood
       ifelse random-float 1 < altruism [ ;;if i am altruist
         let random-disabled one-of patches-with-disabled-neighbor ;;pick a random disabled
@@ -429,7 +442,7 @@ entry-ratio
 entry-ratio
 0.05
 1
-0.2
+0.15
 0.05
 1
 NIL
@@ -444,7 +457,7 @@ normal-speed
 normal-speed
 0.05
 1
-0.8
+0.4
 0.05
 1
 NIL
@@ -459,7 +472,7 @@ disabled-speed
 disabled-speed
 0.05
 normal-speed
-0.4
+0.1
 0.05
 1
 NIL
@@ -487,10 +500,10 @@ SLIDER
 159
 n-roads
 n-roads
-1
+3
 10
 5
-1
+2
 1
 NIL
 HORIZONTAL
@@ -540,7 +553,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-3
+1
 1
 1
 NIL
@@ -555,11 +568,22 @@ plot-exit-number
 plot-exit-number
 1
 n-roads * 2
-3
+1
 1
 1
 NIL
 HORIZONTAL
+
+SWITCH
+33
+174
+204
+207
+only-2-exits?
+only-2-exits?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
