@@ -39,7 +39,7 @@ to setup-patches
     set wall 0
   ]
   set walls patches with
-    [(floor(pxcor / roads-size)) mod 2 = 0 and (floor(pycor / roads-size)) mod 2 = 0 ]
+    [(floor(pxcor / roads-size)) mod 2 = 0 and (floor(pycor / roads-size)) mod 2 = 0]
   ask walls [ set pcolor brown + 2 set wall 1]
   set roads patches with [pcolor = white]
 end
@@ -65,7 +65,7 @@ end
 to setup-exit-points
   let auto-exit-id 0
   if only-2-exits? [ ;;check if i have only 2 exits
-    set walls patches with
+    set walls patches with ;;i delete some of the exits
       [((max-pycor - roads-size < pycor) and not (pxcor > max-pxcor / 2 - roads-size / 2 and pxcor < max-pxcor / 2 + roads-size / 2))
         or
        ((max-pxcor - roads-size < pxcor) and not (pycor > max-pycor / 2 - roads-size / 2 and pycor < max-pycor / 2 + roads-size / 2))
@@ -136,7 +136,7 @@ end
 
 to simulate-arrival-process
   foreach sort(entry-points with [count turtles-here = 0])[ ;;foreach free entry-point
-      if random-float 1 < entry-ratio[ ;;i create a turle
+      if random-float 1 < entry-ratio[ ;;i create a turtle
         ifelse random-float 1 < disabled-ratio[
           create-disableds 1
           [
@@ -188,7 +188,7 @@ end
 
 
 to try-to-help-a-disabled
-    let patches-with-disabled-neighbor neighbors with [count [disableds-here] of patch-at 0 0 > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
+    let patches-with-disabled-neighbor neighbors with [count disableds-here > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
     if any? patches-with-disabled-neighbor [ ;;if there is a disabled in the neighborhood
       ifelse random-float 1 < altruism [ ;;if i am altruist
         let random-disabled one-of patches-with-disabled-neighbor ;;pick a random disabled
@@ -434,7 +434,7 @@ global-altruism
 global-altruism
 0
 1
-0.2
+0.6
 0.05
 1
 NIL
