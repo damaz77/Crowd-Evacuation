@@ -6,22 +6,10 @@ breed [normal-persons]
 breed [disableds]
 
 patches-own
-[
-  wall
-  entry-id
-  exit-id
-]
+[wall  entry-id  exit-id]
 
 turtles-own
-[
-  speed
-  altruism
-  conformism
-  people-right
-  people-up
-  ticks-count
-  entry-point-id
-]
+[speed  altruism  conformism  people-right  people-up  ticks-count  entry-point-id]
 
 to setup
   clear-all
@@ -84,8 +72,8 @@ to setup-exit-points
         ]
     ask walls [ set pcolor brown + 2 set wall 1]
   ]
-    set exit-points roads with [(pxcor = max-pxcor or pycor = max-pycor) and wall = 0 ]
 
+  set exit-points roads with [(pxcor = max-pxcor or pycor = max-pycor) and wall = 0 ]
   let counter 0
   foreach sort exit-points[
     ask ? [
@@ -141,8 +129,13 @@ to initialize-global-stats
 end
 
 to go
-  foreach sort(entry-points with [count turtles-at 0 0 = 0])[ ;;foreach free entry-point
-    if is-patch? ?[
+  simulate-arrival-process
+  move-turtles
+  tick
+end
+
+to simulate-arrival-process
+  foreach sort(entry-points with [count turtles-here = 0])[ ;;foreach free entry-point
       if random-float 1 < entry-ratio[ ;;i create a turle
         ifelse random-float 1 < disabled-ratio[
           create-disableds 1
@@ -174,9 +167,10 @@ to go
           ]
         ]
       ]
-    ]
   ]
+end
 
+to move-turtles
   ask turtles[
     if random-float 1 < speed[
       ifelse two-exits [
@@ -190,8 +184,8 @@ to go
     ]
     set ticks-count ticks-count + 1
   ]
-  tick
 end
+
 
 to try-to-help-a-disabled
     let patches-with-disabled-neighbor neighbors with [count [disableds-here] of patch-at 0 0 > 0] ;;contains a list of patches in the neighborhood in which there is a disabled
@@ -275,7 +269,8 @@ to do-random-feasible-move
     let up-people 0
     foreach sort(conformism-neighbors)[
       if [xcor] of ? != xcor and [ycor] of ? != ycor [ ;;if i'm not the neighbor (lol)
-        let right-distance [xcor] of ? - xcor          let up-distance [ycor] of ? - xcor
+        let right-distance [xcor] of ? - xcor
+        let up-distance [ycor] of ? - xcor
         if right-distance != up-distance [ ;;i dont count people on the diagonal
           ifelse right-distance > up-distance [
             set right-people right-people + 1
