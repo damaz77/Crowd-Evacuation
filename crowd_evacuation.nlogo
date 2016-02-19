@@ -172,13 +172,15 @@ end
 
 to move-turtles
   ask turtles[
+    ;;first of all, check if i have to help a disabled near to me
+    try-to-help-a-disabled
     if random-float 1 < speed[
       ifelse two-exits [
         do-smart-feasible-move
       ]
       [
         ;;do-smart-feasible-move
-        do-random-feasible-move
+        do-conformism-guided-feasible-move
       ]
       check-if-exit
     ]
@@ -211,45 +213,34 @@ to try-to-help-a-disabled
 end
 
 to do-smart-feasible-move
-    ;;first of all, check if i have to help a disabled near to me
-    try-to-help-a-disabled
-
-    ;;next, decide which is the preferred exit point (in this case, the nearest)
-    let nearest-exit one-of exit-points with-min [distance myself] ;;return the nearest exit point to the moving turtle
+    ;;decide which is the preferred exit point (in this case, the nearest)
+    let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
     face nearest-exit ;;set the correct value of "heading"
 
     ;;build an agentset containing the feasible patches near to me
     let feasible-neighbors neighbors4 with [wall = 0 and count turtles-here = 0]
 
     ;;choose the one that matches better with my heading (the direction to reach the exit)
-    let best-move patch-here
-    let best-heading 361
+    let best-move min-one-of feasible-neighbors [abs(180 - abs([heading] of myself - towards myself))]
 
-    ;;TODO: i think i can avoid this foreach in some way
-    foreach sort(feasible-neighbors)[
-      let move-heading towards ?
-      if abs(heading - move-heading) < best-heading [
-        set best-move ?
-        set best-heading abs(heading - move-heading)
-      ]
+    ;;if i cant move, i dont move
+    if best-move != nobody [
+      move-to best-move
     ]
 
-    move-to best-move
 end
 
-to do-random-feasible-move
+to do-conformism-guided-feasible-move
     let right-feasible false
     let up-feasible false
     let right-altruism-possible false
     let up-altruism-possible false
     let neighbors-disabled 0
 
-    try-to-help-a-disabled
-
     ;;feasibility of up and right moves
     if is-patch? patch-at 1 0 [
       if [wall] of patch-at 1 0 = 0 [
-        if count [turtles-at 0 0] of patch-at 1 0 = 0[
+        if count [turtles-here] of patch-at 1 0 = 0[
           set right-feasible true
         ]
       ]
@@ -257,7 +248,7 @@ to do-random-feasible-move
 
     if is-patch? patch-at 0 1 [
       if [wall] of patch-at 0 1 = 0 [
-        if count [turtles-at 0 0] of patch-at 0 1 = 0[
+        if count [turtles-here] of patch-at 0 1 = 0[
           set up-feasible true
         ]
       ]
@@ -479,7 +470,7 @@ entry-ratio
 entry-ratio
 0.05
 1
-0.4
+0.3
 0.05
 1
 NIL
@@ -494,7 +485,7 @@ normal-speed
 normal-speed
 0.05
 1
-0.4
+0.5
 0.05
 1
 NIL
@@ -590,7 +581,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-1
+7
 1
 1
 NIL
@@ -605,7 +596,7 @@ plot-exit-number
 plot-exit-number
 1
 n-roads * 2
-1
+2
 1
 1
 NIL
