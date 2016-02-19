@@ -141,7 +141,6 @@ to initialize-global-stats
 end
 
 to go
- ;; if count turtles <= 1[ ;;TODO
   foreach sort(entry-points with [count turtles-at 0 0 = 0])[ ;;foreach free entry-point
     if is-patch? ?[
       if random-float 1 < entry-ratio[ ;;i create a turle
@@ -176,16 +175,15 @@ to go
         ]
       ]
     ]
- ;; ]
   ]
 
   ask turtles[
     if random-float 1 < speed[
       ifelse two-exits [
         do-smart-feasible-move
-        ;;do-random-feasible-move ;; TODO do-smart-feasible-move
       ]
       [
+        ;;do-smart-feasible-move
         do-random-feasible-move
       ]
       check-if-exit
@@ -219,116 +217,30 @@ to try-to-help-a-disabled
 end
 
 to do-smart-feasible-move
-    let right-feasible false
-    let up-feasible false
-    let left-feasible false
-    let down-feasible false
-
+    ;;first of all, check if i have to help a disabled near to me
     try-to-help-a-disabled
 
-    ;;feasibility moves
-    if is-patch? patch-at 1 0 [
-      if [wall] of patch-at 1 0 = 0 [
-        if count [turtles-at 0 0] of patch-at 1 0 = 0[
-          set right-feasible true
-        ]
+    ;;next, decide which is the preferred exit point (in this case, the nearest)
+    let nearest-exit one-of exit-points with-min [distance myself] ;;return the nearest exit point to the moving turtle
+    face nearest-exit ;;set the correct value of "heading"
+
+    ;;build an agentset containing the feasible patches near to me
+    let feasible-neighbors neighbors4 with [wall = 0 and count turtles-here = 0]
+
+    ;;choose the one that matches better with my heading (the direction to reach the exit)
+    let best-move patch-here
+    let best-heading 361
+
+    ;;TODO: i think i can avoid this foreach in some way
+    foreach sort(feasible-neighbors)[
+      let move-heading towards ?
+      if abs(heading - move-heading) < best-heading [
+        set best-move ?
+        set best-heading abs(heading - move-heading)
       ]
     ]
 
-    if is-patch? patch-at 0 1 [
-      if [wall] of patch-at 0 1 = 0 [
-        if count [turtles-at 0 0] of patch-at 0 1 = 0[
-          set up-feasible true
-        ]
-      ]
-    ]
-
-    if is-patch? patch-at 0 -1 [
-      if [wall] of patch-at 0 -1 = 0 [
-        if count [turtles-at 0 0] of patch-at 0 -1 = 0[
-          set down-feasible true
-        ]
-      ]
-    ]
-
-    if is-patch? patch-at -1 0 [
-      if [wall] of patch-at -1 0 = 0 [
-        if count [turtles-at 0 0] of patch-at -1 0 = 0[
-          set left-feasible true
-        ]
-      ]
-    ]
-
-    let nearest-exit one-of exit-points with-min [distance myself] ;;should return the nearest exit point to the moving turtle
-    ;;ask nearest-exit [set pcolor green]
-    face nearest-exit
-    let preferred-move "both"
-   ;; show heading
-    ifelse heading >= 0 and heading <= 90[
-    ifelse heading > 45  [ ;;todo, anche direzioni finora non ammissibili
-      set preferred-move "right"
-    ]
-    [
-      if heading < 45 [
-        set preferred-move "up"
-      ]
-    ]
-   ;; show preferred-move
-    if preferred-move = "right" [
-      ifelse right-feasible [
-        go-right
-      ]
-      [
-        if up-feasible[
-          go-up
-        ]
-      ]
-    ]
-
-    if preferred-move = "up" [
-      ifelse up-feasible [
-        go-up
-      ]
-      [
-        if right-feasible[
-          go-right
-        ]
-      ]
-    ]
-
-    if preferred-move = "both" [
-      ifelse right-feasible and up-feasible [
-        ifelse random-float 1 < 0.5[
-          go-up
-        ]
-        [
-          go-right
-        ]
-      ]
-      [
-        if up-feasible [
-          go-up
-        ]
-        if right-feasible[
-          go-right
-        ]
-      ]
-    ]
-    ]
-    [
-      if heading > 90 and heading <= 270 [
-        if down-feasible[
-          go-down
-        ]
-      ]
-      if heading > 270 and heading <= 360[
-        if left-feasible[
-          go-left
-        ]
-      ]
-    ]
-
-
+    move-to best-move
 end
 
 to do-random-feasible-move
@@ -460,8 +372,8 @@ end
 GRAPHICS-WINDOW
 235
 31
-740
-557
+920
+737
 -1
 -1
 15.0
@@ -475,9 +387,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-32
+44
 0
-32
+44
 1
 1
 0
@@ -527,7 +439,7 @@ global-altruism
 global-altruism
 0
 1
-0.6
+0.2
 0.05
 1
 NIL
@@ -557,7 +469,7 @@ global-conformism
 global-conformism
 0
 1
-0.75
+0.6
 0.05
 1
 NIL
@@ -572,7 +484,7 @@ entry-ratio
 entry-ratio
 0.05
 1
-0.15
+0.4
 0.05
 1
 NIL
@@ -632,7 +544,7 @@ n-roads
 n-roads
 3
 10
-5
+7
 2
 1
 NIL
@@ -647,17 +559,17 @@ conformism-radius
 conformism-radius
 1
 10
-4
+5
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-797
-148
-1195
-411
+1049
+127
+1447
+390
 Average ticks count on selected entry-exit pair
 NIL
 NIL
@@ -675,10 +587,10 @@ PENS
 "non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" \n           \n]"
 
 SLIDER
-797
-55
-969
-88
+1049
+34
+1221
+67
 plot-entry-number
 plot-entry-number
 1
@@ -690,10 +602,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-796
-94
-968
-127
+1048
+73
+1220
+106
 plot-exit-number
 plot-exit-number
 1
