@@ -146,7 +146,6 @@ to simulate-arrival-process
             set speed disabled-speed
             set color red
             set altruism -1.0
-            set conformism global-conformism
             set ticks-count 0
             set entry-point-id entry-id
           ]
@@ -159,7 +158,6 @@ to simulate-arrival-process
             set speed normal-speed
             set color blue
             set altruism global-altruism
-            set conformism global-conformism
             set ticks-count 0
             set entry-point-id entry-id
             ;;set label who
@@ -175,13 +173,7 @@ to move-turtles
     ;;first of all, check if i have to help a disabled near to me
     try-to-help-a-disabled
     if random-float 1 < speed[
-      ifelse two-exits [
-        do-smart-feasible-move
-      ]
-      [
-        ;;do-smart-feasible-move
-        do-conformism-guided-feasible-move
-      ]
+      do-smart-feasible-move
       check-if-exit
     ]
     set ticks-count ticks-count + 1
@@ -213,16 +205,30 @@ to try-to-help-a-disabled
 end
 
 to do-smart-feasible-move
-    ;;decide which is the preferred exit point (in this case, the nearest)
-    let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
-    face nearest-exit ;;set the correct value of "heading"
-
     ;;build an agentset containing the feasible patches near to me
     let feasible-neighbors neighbors4 with [wall = 0 and count turtles-here = 0]
 
+    ;;decide which is the preferred exit point (in this case, the nearest)
+    let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
+
+    face nearest-exit ;;set the correct value of "heading"
+
+    ;;an agentset containing the turtles next to me in conformism-radius (but only with "better" coordinates, i.e i don't look back)
+    let people-in-conformism-radius turtles in-radius conformism-radius with [xcor >= [xcor] of myself and ycor >= [ycor] of myself]
+
+    if random-float 1 < global-conformism[ ;;i'm conformist
+      ;;if count people-in-conformism-radius > 3[
+      if not empty? sort people-in-conformism-radius  [
+        let mean-x mean [xcor] of people-in-conformism-radius
+        let mean-y mean [ycor] of people-in-conformism-radius
+        if mean-x != xcor or mean-y != ycor [
+          set heading towardsxy mean-x mean-y
+        ]
+      ]
+    ]
+
     ;;choose the one that matches better with my heading (the direction to reach the exit)
     let best-move min-one-of feasible-neighbors [abs(180 - abs([heading] of myself - towards myself))]
-
     ;;if i cant move, i dont move
     if best-move != nobody [
       move-to best-move
@@ -230,99 +236,9 @@ to do-smart-feasible-move
 
 end
 
-to do-conformism-guided-feasible-move
-    let right-feasible false
-    let up-feasible false
-    let right-altruism-possible false
-    let up-altruism-possible false
-    let neighbors-disabled 0
-
-    ;;feasibility of up and right moves
-    if is-patch? patch-at 1 0 [
-      if [wall] of patch-at 1 0 = 0 [
-        if count [turtles-here] of patch-at 1 0 = 0[
-          set right-feasible true
-        ]
-      ]
-    ]
-
-    if is-patch? patch-at 0 1 [
-      if [wall] of patch-at 0 1 = 0 [
-        if count [turtles-here] of patch-at 0 1 = 0[
-          set up-feasible true
-        ]
-      ]
-    ]
-
-
-    let conformism-neighbors turtles in-radius conformism-radius
-    let right-people 0
-    let up-people 0
-    foreach sort(conformism-neighbors)[
-      if [xcor] of ? != xcor and [ycor] of ? != ycor [ ;;if i'm not the neighbor (lol)
-        let right-distance [xcor] of ? - xcor
-        let up-distance [ycor] of ? - xcor
-        if right-distance != up-distance [ ;;i dont count people on the diagonal
-          ifelse right-distance > up-distance [
-            set right-people right-people + 1
-          ]
-          [
-            set up-people up-people + 1
-          ]
-        ]
-      ]
-    ]
-
-    let evaluate-conformism true
-    if up-people = right-people [ ;;if there is not a more conformist way
-      set evaluate-conformism false
-    ]
-
-
-    ifelse (right-feasible and up-feasible)[
-      ;; now i evaluate the conformism, if i have to
-      ifelse evaluate-conformism[
-        ifelse random-float 1 < conformism[ ;;i'm conformist
-          ifelse right-people > up-people [
-            go-right
-          ]
-          [
-            go-up
-          ]
-        ]
-        [
-          ifelse right-people > up-people [ ;;i'm anticonformist
-            go-up
-          ]
-          [
-            go-right
-          ]
-        ]
-      ]
-      [
-        ifelse random-float 1 < 0.5[
-          go-up
-        ]
-        [
-          go-right
-        ]
-      ]
-    ]
-    [
-      if up-feasible [
-        go-up
-      ]
-      if right-feasible[
-        go-right
-      ]
-    ]
-end
-
-
 to go-right
   setxy [xcor] of self + 1  [ycor] of self
 end
-
 
 to go-up
   setxy [xcor] of self [ycor] of self + 1
@@ -335,7 +251,6 @@ end
 to go-left
   setxy [xcor] of self - 1  [ycor] of self
 end
-
 
 to check-if-exit
   if member? patch-here exit-points[
@@ -455,7 +370,7 @@ global-conformism
 global-conformism
 0
 1
-0.6
+0.3
 0.05
 1
 NIL
@@ -468,9 +383,9 @@ SLIDER
 392
 entry-ratio
 entry-ratio
-0.05
+0.0
 1
-0.3
+0.05
 0.05
 1
 NIL
@@ -485,7 +400,7 @@ normal-speed
 normal-speed
 0.05
 1
-0.5
+0.4
 0.05
 1
 NIL
@@ -544,8 +459,8 @@ SLIDER
 conformism-radius
 conformism-radius
 1
+20
 10
-5
 1
 1
 NIL
