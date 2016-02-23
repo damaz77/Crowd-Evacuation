@@ -9,7 +9,7 @@ patches-own
 [wall  entry-id  exit-id]
 
 turtles-own
-[speed  altruism  conformism  people-right  people-up  ticks-count  entry-point-id]
+[speed  altruism  conformism  people-right  people-up  ticks-count  entry-point-id conformist]
 
 to setup
   clear-all
@@ -24,7 +24,8 @@ end
 
 to setup-classes
   set classes table:make
-  table:put classes blue "normals"
+  table:put classes blue "conformists"
+  table:put classes green "anti-conformists"
   table:put classes red "disableds"
   table:put classes orange "altruists"
   table:put classes black "non-altruists"
@@ -103,7 +104,12 @@ to initialize-global-stats
       let simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
-      table:put breeds "normals" simple-stats
+      table:put breeds "conformists" simple-stats
+
+      set simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "anti-conformists" simple-stats
 
       set simple-stats table:make
       table:put simple-stats "count" 0
@@ -148,6 +154,7 @@ to simulate-arrival-process
             set altruism -1.0
             set ticks-count 0
             set entry-point-id entry-id
+            set conformist true
           ]
         ]
         [
@@ -160,6 +167,13 @@ to simulate-arrival-process
             set altruism global-altruism
             set ticks-count 0
             set entry-point-id entry-id
+            ifelse random-float 1 < global-conformism [
+              set conformist true
+            ]
+            [
+              set conformist false
+              set color green
+            ]
             ;;set label who
             ;;set label-color red
           ]
@@ -186,12 +200,15 @@ to try-to-help-a-disabled
     if any? patches-with-disabled-neighbor [ ;;if there is a disabled in the neighborhood
       ifelse random-float 1 < altruism [ ;;if i am altruist
         let random-disabled one-of patches-with-disabled-neighbor ;;pick a random disabled
+        let disabled-ticks-count 0
         ask random-disabled [ ;;and "help" him
           ask disableds-here [
+            set disabled-ticks-count ticks-count
             die
           ]
         ]
         set speed (disabled-speed + normal-speed) / 2 ;;now i'm slower
+        set ticks-count max list ticks-count disabled-ticks-count
         set color orange
         set altruism 0.0 ;;and i cant help anybody else
       ]
@@ -209,22 +226,49 @@ to do-smart-feasible-move
     let feasible-neighbors neighbors4 with [wall = 0 and count turtles-here = 0]
 
     ;;decide which is the preferred exit point (in this case, the nearest)
-    let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
+    ;;let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
 
     ;;order the exit points by distance from the turtle
     let ordered-exits sort-on [distance myself] exit-points
 
-    face nearest-exit ;;set the correct value of "heading"
+    ;;the nearest exit is the first
+    let nearest-exit item 0 ordered-exits
+    let heading-nearest-exit 0
 
-    ;;an agentset containing the turtles next to me in conformism-radius (but only with "better" coordinates, i.e i don't look back)
-    let people-in-conformism-radius turtles in-radius conformism-radius with [xcor >= [xcor] of myself and ycor >= [ycor] of myself]
+    ask nearest-exit [
+      set heading-nearest-exit towards myself
+    ]
 
-    if random-float 1 < global-conformism[ ;;i'm conformist
-      if not empty? sort people-in-conformism-radius  [
-        let mean-x mean [xcor] of people-in-conformism-radius
-        let mean-y mean [ycor] of people-in-conformism-radius
-        if mean-x != xcor or mean-y != ycor [
-          set heading towardsxy mean-x mean-y
+    ;;NOT SURE but i think this is the second nearest exit which is not in the same group of the nearest one
+    let second-nearest-exit item roads-size ordered-exits
+    let heading-second-nearest-exit 0
+
+    ask second-nearest-exit [
+      set heading-second-nearest-exit towards myself
+    ]
+
+    ;;an agentset containing the turtles next to me in conformism-radius (but only with "better" coordinates wrt the nearest exit)
+    let people-between-nearest-exit turtles in-radius conformism-radius with [([xcor] of myself != xcor or [ycor] of myself != ycor) and
+      towards myself >  heading-nearest-exit - 45 and towards myself < heading-nearest-exit + 45]
+
+    ;;an agentset containing the free patches next to me in conformism-radius (but only with "better" coordinates wrt the nearest exit)
+    let free-patches-between-nearest-exit patches in-radius conformism-radius with [([xcor] of myself != pxcor or [ycor] of myself != pycor) and
+      towards myself >  heading-nearest-exit - 45 and towards myself < heading-nearest-exit + 45 and
+      count turtles-here = 0]
+
+    ;;an agentset containing the turtles next to me in conformism-radius (but only with "better" coordinates wrt the second nearest exit)
+    let people-between-second-nearest-exit turtles in-radius conformism-radius with [([xcor] of myself != xcor or [ycor] of myself != ycor) and
+      towards myself >  heading-second-nearest-exit - 45 and towards myself < heading-second-nearest-exit + 45]
+
+    face nearest-exit
+
+    if conformist = false[ ;;i'm not conformist
+
+      ;;if the second exit in less conformist (less people next to me)
+      if count people-between-second-nearest-exit < count people-between-nearest-exit [
+        ;;if the conformist way is too busy
+        if count people-between-nearest-exit >= count free-patches-between-nearest-exit[
+          face second-nearest-exit
         ]
       ]
     ]
@@ -341,7 +385,7 @@ disabled-ratio
 disabled-ratio
 0
 1
-0.1
+0.05
 0.05
 1
 NIL
@@ -356,7 +400,7 @@ global-conformism
 global-conformism
 0
 1
-0.4
+0.6
 0.05
 1
 NIL
@@ -371,7 +415,7 @@ entry-ratio
 entry-ratio
 0.0
 1
-0.1
+0.25
 0.05
 1
 NIL
@@ -445,8 +489,8 @@ SLIDER
 conformism-radius
 conformism-radius
 1
-20
-10
+5
+3
 1
 1
 NIL
@@ -468,10 +512,11 @@ true
 true
 "" ""
 PENS
-"normals" 1.0 0 -13345367 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"normals\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"normals\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"normals\" \"count\" \n           \n]"
+"conformists" 1.0 0 -13345367 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"count\" \n           \n]"
 "disableds" 1.0 0 -2674135 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" \n           \n]"
 "altruists" 1.0 0 -955883 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"count\" \n           \n]"
 "non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" \n           \n]"
+"anti-conformists" 1.0 0 -10899396 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" \n           \n]"
 
 SLIDER
 1049
@@ -482,7 +527,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-7
+8
 1
 1
 NIL
