@@ -42,11 +42,20 @@ to setup-patches
   set walls patches with
     [(floor(pxcor / roads-size)) mod 2 = 0 and (floor(pycor / roads-size)) mod 2 = 0]
   ask walls [ set pcolor brown + 2 set wall 1]
-  set roads patches with [pcolor = white]
+
 end
 
 to setup-entry-points
   let auto-entry-id 0
+  if only-2-entries? [
+    set walls patches with
+      [((pxcor < roads-size or pycor < roads-size) and not (pxcor > max-pxcor / 2 - roads-size / 2 and pxcor < max-pxcor / 2 + roads-size / 2))
+        and
+       ((pxcor < roads-size or pycor < roads-size) and not (pycor > max-pycor / 2 - roads-size / 2 and pycor < max-pycor / 2 + roads-size / 2))
+        ]
+    ask walls [ set pcolor brown + 2 set wall 1]
+  ]
+  set roads patches with [pcolor = white]
   set entry-points roads with
     [pxcor = 0 or pycor = 0]
   let counter 0
@@ -174,8 +183,6 @@ to simulate-arrival-process
               set conformist false
               set color green
             ]
-            ;;set label who
-            ;;set label-color red
           ]
         ]
       ]
@@ -225,9 +232,6 @@ to do-smart-feasible-move
     ;;build an agentset containing the feasible patches near to me
     let feasible-neighbors neighbors4 with [wall = 0 and count turtles-here = 0]
 
-    ;;decide which is the preferred exit point (in this case, the nearest)
-    ;;let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
-
     ;;order the exit points by distance from the turtle
     let ordered-exits sort-on [distance myself] exit-points
 
@@ -263,7 +267,6 @@ to do-smart-feasible-move
     face nearest-exit
 
     if conformist = false[ ;;i'm not conformist
-
       ;;if the second exit in less conformist (less people next to me)
       if count people-between-second-nearest-exit < count people-between-nearest-exit [
         ;;if the conformist way is too busy
@@ -303,8 +306,8 @@ end
 GRAPHICS-WINDOW
 235
 31
-920
-737
+905
+722
 -1
 -1
 15.0
@@ -318,9 +321,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-44
+43
 0
-44
+43
 1
 1
 0
@@ -345,10 +348,10 @@ NIL
 1
 
 BUTTON
-35
-233
-98
-266
+32
+280
+95
+313
 NIL
 go
 T
@@ -362,10 +365,10 @@ NIL
 0
 
 SLIDER
-34
-401
-206
-434
+31
+448
+203
+481
 global-altruism
 global-altruism
 0
@@ -377,40 +380,40 @@ NIL
 HORIZONTAL
 
 SLIDER
-33
+30
+570
+202
+603
+disabled-ratio
+disabled-ratio
+0
+1
+0.05
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+31
+490
+203
 523
-205
-556
-disabled-ratio
-disabled-ratio
+global-conformism
+global-conformism
 0
 1
-0.05
+0.5
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-34
-443
-206
-476
-global-conformism
-global-conformism
-0
-1
-0.6
-0.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-35
-359
-207
-392
+32
+406
+204
+439
 entry-ratio
 entry-ratio
 0.0
@@ -422,10 +425,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-35
-277
-207
-310
+32
+324
+204
+357
 normal-speed
 normal-speed
 0.05
@@ -437,10 +440,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-35
-318
-207
-351
+32
+365
+204
+398
 disabled-speed
 disabled-speed
 0.05
@@ -460,8 +463,8 @@ roads-size
 roads-size
 1
 9
-3
-2
+4
+1
 1
 NIL
 HORIZONTAL
@@ -475,22 +478,22 @@ n-roads
 n-roads
 3
 10
-7
+5
 2
 1
 NIL
 HORIZONTAL
 
 SLIDER
-34
-483
-206
-516
+31
+530
+203
+563
 conformism-radius
 conformism-radius
 1
-5
-3
+10
+4
 1
 1
 NIL
@@ -527,7 +530,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-8
+3
 1
 1
 NIL
@@ -556,6 +559,17 @@ SWITCH
 only-2-exits?
 only-2-exits?
 0
+1
+-1000
+
+SWITCH
+33
+219
+203
+252
+only-2-entries?
+only-2-entries?
+1
 1
 -1000
 
