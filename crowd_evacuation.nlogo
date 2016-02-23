@@ -211,13 +211,15 @@ to do-smart-feasible-move
     ;;decide which is the preferred exit point (in this case, the nearest)
     let nearest-exit min-one-of exit-points [distance myself] ;;return the nearest exit point to the moving turtle
 
+    ;;order the exit points by distance from the turtle
+    let ordered-exits sort-on [distance myself] exit-points
+
     face nearest-exit ;;set the correct value of "heading"
 
     ;;an agentset containing the turtles next to me in conformism-radius (but only with "better" coordinates, i.e i don't look back)
     let people-in-conformism-radius turtles in-radius conformism-radius with [xcor >= [xcor] of myself and ycor >= [ycor] of myself]
 
     if random-float 1 < global-conformism[ ;;i'm conformist
-      ;;if count people-in-conformism-radius > 3[
       if not empty? sort people-in-conformism-radius  [
         let mean-x mean [xcor] of people-in-conformism-radius
         let mean-y mean [ycor] of people-in-conformism-radius
@@ -234,22 +236,6 @@ to do-smart-feasible-move
       move-to best-move
     ]
 
-end
-
-to go-right
-  setxy [xcor] of self + 1  [ycor] of self
-end
-
-to go-up
-  setxy [xcor] of self [ycor] of self + 1
-end
-
-to go-down
-  setxy [xcor] of self [ycor] of self - 1
-end
-
-to go-left
-  setxy [xcor] of self - 1  [ycor] of self
 end
 
 to check-if-exit
@@ -370,7 +356,7 @@ global-conformism
 global-conformism
 0
 1
-0.3
+0.4
 0.05
 1
 NIL
@@ -385,7 +371,7 @@ entry-ratio
 entry-ratio
 0.0
 1
-0.05
+0.1
 0.05
 1
 NIL
