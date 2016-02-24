@@ -30,8 +30,10 @@ to setup-classes
   table:put classes blue "conformists"
   table:put classes green "anti-conformists"
   table:put classes red "disableds"
-  table:put classes orange "altruists"
-  table:put classes black "non-altruists"
+  table:put classes orange "conformists-altruists"
+  table:put classes black "conformists-non-altruists"
+  table:put classes yellow "non-conformists-altruists"
+  table:put classes grey - 2 "non-conformists-non-altruists"
 end
 
 
@@ -102,9 +104,14 @@ to setup-exit-points
 end
 
 to setup-obstacles
-  set walls patches with
-      [(pycor > max-pycor / 2 -  3 * roads-size / 2 and pycor < max-pycor / 2 + 3 * roads-size / 2 ) and (pxcor > max-pxcor / 2 - 3 * roads-size / 2  and pxcor < max-pxcor / 2 + 3 * roads-size / 2 )]
-  ask walls [ set pcolor brown + 2 set wall 1]
+  let walls1 patches with
+      [(pycor - 2 * roads-size > max-pycor / 2 -  3 * roads-size / 2 and pycor - 2 * roads-size < max-pycor / 2 + 3 * roads-size / 2 ) and
+         (pxcor + 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor + 2 * roads-size < max-pxcor / 2 + 3 * roads-size / 2 )]
+  let walls2 patches with
+      [(pycor + 2 * roads-size > max-pycor / 2 -  3 * roads-size / 2 and pycor + 2 * roads-size < max-pycor / 2 + 3 * roads-size / 2 ) and
+        (pxcor - 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor - 2 * roads-size < max-pxcor / 2 + 3 * roads-size / 2 )]
+  ask walls1 [ set pcolor brown + 2 set wall 1]
+  ask walls2 [ set pcolor brown + 2 set wall 1]
 end
 
 to initialize-global-stats
@@ -137,12 +144,22 @@ to initialize-global-stats
       set simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
-      table:put breeds "altruists" simple-stats
+      table:put breeds "conformists-altruists" simple-stats
 
       set simple-stats table:make
       table:put simple-stats "count" 0
       table:put simple-stats "tick-count" 0
-      table:put breeds "non-altruists" simple-stats
+      table:put breeds "conformists-non-altruists" simple-stats
+
+      set simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "non-conformists-altruists" simple-stats
+
+      set simple-stats table:make
+      table:put simple-stats "count" 0
+      table:put simple-stats "tick-count" 0
+      table:put breeds "non-conformists-non-altruists" simple-stats
 
       table:put entries (word "entry" j) breeds
       set j j + 1
@@ -225,13 +242,23 @@ to try-to-help-a-disabled
         ]
         set speed (disabled-speed + normal-speed) / 2 ;;now i'm slower
         set ticks-count max list ticks-count disabled-ticks-count
-        set color orange
+        ifelse conformist[
+          set color orange
+        ]
+        [
+          set color yellow
+        ]
         set altruism 0.0 ;;and i cant help anybody else
       ]
       [
-        if altruism >= 0 and color != orange [ ;;if i'm a bad person, i become black
+        if altruism >= 0 and (color != orange or color != violet)[ ;;if i'm a bad person, i become black
           set altruism 0.0 ;;no chance of redemption
-          set color black
+          ifelse conformist[
+            set color black
+          ]
+          [
+            set color grey - 2
+          ]
         ]
       ]
     ]
@@ -424,7 +451,7 @@ entry-ratio
 entry-ratio
 0.0
 1
-0.15
+0.2
 0.05
 1
 NIL
@@ -482,7 +509,7 @@ SLIDER
 159
 n-roads
 n-roads
-3
+1
 10
 5
 2
@@ -506,7 +533,7 @@ NIL
 HORIZONTAL
 
 PLOT
-1049
+936
 127
 1447
 390
@@ -522,10 +549,12 @@ true
 "" ""
 PENS
 "conformists" 1.0 0 -13345367 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"count\" \n           \n]"
-"disableds" 1.0 0 -2674135 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" \n           \n]"
-"altruists" 1.0 0 -955883 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"altruists\" \"count\" \n           \n]"
-"non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-altruists\" \"count\" \n           \n]"
-"anti-conformists" 1.0 0 -10899396 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" \n           \n]"
+"disableds" 1.0 0 -2674135 false "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" \n           \n]"
+"conformists-altruists" 1.0 0 -955883 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-altruists\" \"count\" \n           \n]"
+"conformists-non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-non-altruists\" \"count\" \n           \n]"
+"non-conformists" 1.0 0 -10899396 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" \n           \n]"
+"non-conformists-non-altruists" 1.0 0 -7500403 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-non-altruists\" \"count\" \n           \n]"
+"non-conformists-altruists" 1.0 0 -1184463 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-altruists\" \"count\" \n           \n]"
 
 SLIDER
 1049
@@ -536,7 +565,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-8
+1
 1
 1
 NIL
@@ -551,7 +580,7 @@ plot-exit-number
 plot-exit-number
 1
 n-roads * 2
-2
+1
 1
 1
 NIL
