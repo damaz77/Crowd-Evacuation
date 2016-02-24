@@ -17,6 +17,9 @@ to setup
   setup-patches
   setup-entry-points
   setup-exit-points
+  if add-obstacles? [
+    setup-obstacles
+  ]
   initialize-global-stats
   set-default-shape turtles "person"
   reset-ticks
@@ -96,6 +99,12 @@ to setup-exit-points
       set plabel exit-id
     ]
   ]
+end
+
+to setup-obstacles
+  set walls patches with
+      [(pycor > max-pycor / 2 -  3 * roads-size / 2 and pycor < max-pycor / 2 + 3 * roads-size / 2 ) and (pxcor > max-pxcor / 2 - 3 * roads-size / 2  and pxcor < max-pxcor / 2 + 3 * roads-size / 2 )]
+  ask walls [ set pcolor brown + 2 set wall 1]
 end
 
 to initialize-global-stats
@@ -232,19 +241,16 @@ to do-smart-feasible-move
     ;;build an agentset containing the feasible patches near to me
     let feasible-neighbors neighbors4 with [wall = 0 and count turtles-here = 0]
 
-    ;;order the exit points by distance from the turtle
-    let ordered-exits sort-on [distance myself] exit-points
-
     ;;the nearest exit is the first
-    let nearest-exit item 0 ordered-exits
+    let nearest-exit min-one-of exit-points [distance myself]
     let heading-nearest-exit 0
 
     ask nearest-exit [
       set heading-nearest-exit towards myself
     ]
 
-    ;;NOT SURE but i think this is the second nearest exit which is not in the same group of the nearest one
-    let second-nearest-exit item roads-size ordered-exits
+    ;;this is the second nearest exit which is not in the same group of the nearest one
+    let second-nearest-exit min-one-of exit-points with [exit-id != [exit-id] of nearest-exit] [distance myself]
     let heading-second-nearest-exit 0
 
     ask second-nearest-exit [
@@ -348,10 +354,10 @@ NIL
 1
 
 BUTTON
-32
-280
-95
-313
+31
+340
+94
+373
 NIL
 go
 T
@@ -365,15 +371,30 @@ NIL
 0
 
 SLIDER
-31
-448
-203
-481
+30
+508
+202
+541
 global-altruism
 global-altruism
 0
 1
-0.6
+0.3
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+29
+630
+201
+663
+disabled-ratio
+disabled-ratio
+0
+1
+0.05
 0.05
 1
 NIL
@@ -381,24 +402,9 @@ HORIZONTAL
 
 SLIDER
 30
-570
+550
 202
-603
-disabled-ratio
-disabled-ratio
-0
-1
-0.05
-0.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-31
-490
-203
-523
+583
 global-conformism
 global-conformism
 0
@@ -410,25 +416,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-406
-204
-439
+31
+466
+203
+499
 entry-ratio
 entry-ratio
 0.0
 1
-0.25
+0.15
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-32
-324
-204
-357
+31
+384
+203
+417
 normal-speed
 normal-speed
 0.05
@@ -440,10 +446,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-365
-204
-398
+31
+425
+203
+458
 disabled-speed
 disabled-speed
 0.05
@@ -485,15 +491,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-31
-530
-203
-563
+30
+590
+202
+623
 conformism-radius
 conformism-radius
 1
 10
-4
+3
 1
 1
 NIL
@@ -530,7 +536,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-3
+8
 1
 1
 NIL
@@ -569,6 +575,17 @@ SWITCH
 252
 only-2-entries?
 only-2-entries?
+1
+1
+-1000
+
+SWITCH
+34
+266
+200
+299
+add-obstacles?
+add-obstacles?
 1
 1
 -1000
