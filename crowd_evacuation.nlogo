@@ -61,14 +61,27 @@ to setup-entry-points
     ask walls [ set pcolor brown + 2 set wall 1]
   ]
   set roads patches with [pcolor = white]
-  set entry-points roads with
-    [pxcor = 0 or pycor = 0]
+  ifelse two-lines-entries? [
+    set entry-points roads with
+      [pxcor <= 1 or pycor <= 1]
+  ]
+  [
+    set entry-points roads with
+      [pxcor = 0 or pycor = 0]
+  ]
   let counter 0
-  foreach sort entry-points[
+  foreach sort-on [distancexy 0 max-pycor] entry-points [
     ask ? [
       set pcolor green
-      if counter mod roads-size = 0 [
-        set auto-entry-id auto-entry-id + 1
+      ifelse two-lines-entries? [
+        if counter mod ( 2 * roads-size) = 0 [
+          set auto-entry-id auto-entry-id + 1
+        ]
+      ]
+      [
+        if counter mod (roads-size) = 0 [
+          set auto-entry-id auto-entry-id + 1
+        ]
       ]
       set entry-id auto-entry-id
       set counter counter + 1
@@ -106,10 +119,10 @@ end
 to setup-obstacles
   let walls1 patches with
       [(pycor - 2 * roads-size > max-pycor / 2 -  3 * roads-size / 2 and pycor - 2 * roads-size < max-pycor / 2 + 3 * roads-size / 2 ) and
-         (pxcor + 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor + 2 * roads-size < max-pxcor / 2 + 3 * roads-size / 2 )]
+         (pxcor + 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor  < max-pxcor / 2 + 3 * roads-size / 2 )]
   let walls2 patches with
       [(pycor + 2 * roads-size > max-pycor / 2 -  3 * roads-size / 2 and pycor + 2 * roads-size < max-pycor / 2 + 3 * roads-size / 2 ) and
-        (pxcor - 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor - 2 * roads-size < max-pxcor / 2 + 3 * roads-size / 2 )]
+        (pxcor > max-pxcor / 2 - 3 * roads-size / 2  and pxcor - 2 * roads-size < max-pxcor / 2 + 3 * roads-size / 2 )]
   ask walls1 [ set pcolor brown + 2 set wall 1]
   ask walls2 [ set pcolor brown + 2 set wall 1]
 end
@@ -382,9 +395,9 @@ NIL
 
 BUTTON
 31
-340
+425
 94
-373
+458
 NIL
 go
 T
@@ -399,9 +412,9 @@ NIL
 
 SLIDER
 30
-508
+593
 202
-541
+626
 global-altruism
 global-altruism
 0
@@ -414,9 +427,9 @@ HORIZONTAL
 
 SLIDER
 29
-630
+715
 201
-663
+748
 disabled-ratio
 disabled-ratio
 0
@@ -429,9 +442,9 @@ HORIZONTAL
 
 SLIDER
 30
-550
+635
 202
-583
+668
 global-conformism
 global-conformism
 0
@@ -444,14 +457,14 @@ HORIZONTAL
 
 SLIDER
 31
-466
+551
 203
-499
+584
 entry-ratio
 entry-ratio
 0.0
 1
-0.2
+0.1
 0.05
 1
 NIL
@@ -459,9 +472,9 @@ HORIZONTAL
 
 SLIDER
 31
-384
+469
 203
-417
+502
 normal-speed
 normal-speed
 0.05
@@ -474,9 +487,9 @@ HORIZONTAL
 
 SLIDER
 31
-425
+510
 203
-458
+543
 disabled-speed
 disabled-speed
 0.05
@@ -494,7 +507,7 @@ SLIDER
 120
 roads-size
 roads-size
-1
+2
 9
 4
 1
@@ -509,8 +522,8 @@ SLIDER
 159
 n-roads
 n-roads
-1
-10
+5
+11
 5
 2
 1
@@ -519,9 +532,9 @@ HORIZONTAL
 
 SLIDER
 30
-590
+675
 202
-623
+708
 conformism-radius
 conformism-radius
 1
@@ -565,7 +578,7 @@ plot-entry-number
 plot-entry-number
 1
 n-roads * 2
-1
+2
 1
 1
 NIL
@@ -580,7 +593,7 @@ plot-exit-number
 plot-exit-number
 1
 n-roads * 2
-1
+2
 1
 1
 NIL
@@ -615,46 +628,22 @@ SWITCH
 299
 add-obstacles?
 add-obstacles?
+0
+1
+-1000
+
+SWITCH
+32
+313
+200
+346
+two-lines-entries?
+two-lines-entries?
 1
 1
 -1000
 
 @#$#@#$#@
-## WHAT IS IT?
-
-(a general understanding of what the model is trying to show or explain)
-
-## HOW IT WORKS
-
-(what rules the agents use to create the overall behavior of the model)
-
-## HOW TO USE IT
-
-(how to use the model, including a description of each of the items in the Interface tab)
-
-## THINGS TO NOTICE
-
-(suggested things for the user to notice while running the model)
-
-## THINGS TO TRY
-
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
-
-## EXTENDING THE MODEL
-
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
-
-## NETLOGO FEATURES
-
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
-
-## RELATED MODELS
-
-(models in the NetLogo Models Library and elsewhere which are of related interest)
-
-## CREDITS AND REFERENCES
-
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
 @#$#@#$#@
 default
 true
