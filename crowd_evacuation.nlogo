@@ -1,6 +1,6 @@
 extensions [array table]
 
-globals [last-x last-y roads walls classes entry-points exit-points grid-x-inc grid-y-inc global-stats two-exits]
+globals [last-x last-y roads walls entry-points exit-points grid-x-inc grid-y-inc two-exits entry-stats entry-exit-stats turtles-classes global-sojourn-stats global-entry-stats]
 
 breed [normal-persons]
 breed [disableds]
@@ -9,33 +9,61 @@ patches-own
 [wall  entry-id  exit-id]
 
 turtles-own
-[speed  altruism  conformism  people-right  people-up  ticks-count  entry-point-id conformist]
+[speed  altruism  conformism  people-right  people-up  ticks-count  entry-point-id secondary-entry-point-id conformist]
+
 
 to setup
   clear-all
-  setup-classes
   setup-patches
   setup-entry-points
   setup-exit-points
   if add-obstacles? [
     setup-obstacles
   ]
-  initialize-global-stats
+  setup-classes
+  setup-global-stats
   set-default-shape turtles "person"
   reset-ticks
 end
 
 to setup-classes
-  set classes table:make
-  table:put classes blue "conformists"
-  table:put classes green "anti-conformists"
-  table:put classes red "disableds"
-  table:put classes orange "conformists-altruists"
-  table:put classes black "conformists-non-altruists"
-  table:put classes yellow "non-conformists-altruists"
-  table:put classes grey - 2 "non-conformists-non-altruists"
+    set turtles-classes table:make
+    table:put turtles-classes blue "conformists"
+    table:put turtles-classes green "non-conformists"
+    table:put turtles-classes red "disableds"
+    table:put turtles-classes orange "conformists-altruists"
+    table:put turtles-classes black "conformists-non-altruists"
+    table:put turtles-classes yellow "non-conformists-altruists"
+    table:put turtles-classes grey - 2 "non-conformists-non-altruists"
 end
 
+to setup-global-stats
+  set entry-stats table:make
+  set entry-exit-stats table:make
+  set global-sojourn-stats table:make
+
+  set global-entry-stats table:make
+
+  foreach sort exit-points[
+    let exit [exit-id] of ?
+    foreach sort entry-points[
+      let entry [entry-id] of ?
+      table:put entry-stats entry 0
+      let aux-stats table:make
+      foreach table:to-list turtles-classes[
+        table:put aux-stats item 1 ? 0
+      ]
+      table:put global-sojourn-stats entry aux-stats
+      let aux-stats2 table:make
+      foreach table:to-list turtles-classes[
+        table:put aux-stats2 item 1 ? 0
+      ]
+      table:put global-entry-stats entry aux-stats2
+      let entry-exit-pair (word entry "," exit)
+      table:put entry-exit-stats entry-exit-pair 0
+    ]
+  ]
+end
 
 to setup-patches
   resize-world 0 (2 * n-roads + 1) * roads-size - 1 0 (2 * n-roads + 1) * roads-size - 1
@@ -119,7 +147,7 @@ end
 to setup-obstacles
   let walls1 patches with
       [(pycor - 2 * roads-size > max-pycor / 2 -  3 * roads-size / 2 and pycor - 2 * roads-size < max-pycor / 2 + 3 * roads-size / 2 ) and
-         (pxcor + 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor  < max-pxcor / 2 + 3 * roads-size / 2 )]
+         (pxcor + 2 * roads-size > max-pxcor / 2 - 3 * roads-size / 2  and pxcor < max-pxcor / 2 + 3 * roads-size / 2 )]
   let walls2 patches with
       [(pycor + 2 * roads-size > max-pycor / 2 -  3 * roads-size / 2 and pycor + 2 * roads-size < max-pycor / 2 + 3 * roads-size / 2 ) and
         (pxcor > max-pxcor / 2 - 3 * roads-size / 2  and pxcor - 2 * roads-size < max-pxcor / 2 + 3 * roads-size / 2 )]
@@ -127,75 +155,23 @@ to setup-obstacles
   ask walls2 [ set pcolor brown + 2 set wall 1]
 end
 
-to initialize-global-stats
-  let entry-number 2 * n-roads
-  let exit-number 2 * n-roads
-  set two-exits only-2-exits?
-  set global-stats table:make
-  let i 1
-  while [i <= exit-number] [
-    let entries table:make
-    let j 1
-    while [j <= entry-number] [
-      let breeds table:make
-
-      let simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "conformists" simple-stats
-
-      set simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "anti-conformists" simple-stats
-
-      set simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "disableds" simple-stats
-
-      set simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "conformists-altruists" simple-stats
-
-      set simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "conformists-non-altruists" simple-stats
-
-      set simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "non-conformists-altruists" simple-stats
-
-      set simple-stats table:make
-      table:put simple-stats "count" 0
-      table:put simple-stats "tick-count" 0
-      table:put breeds "non-conformists-non-altruists" simple-stats
-
-      table:put entries (word "entry" j) breeds
-      set j j + 1
-    ]
-    table:put global-stats (word "exit" i) entries
-    set i i + 1
-  ]
-end
-
 to go
-  simulate-arrival-process
+  if ticks < 20000[
+    simulate-arrival-process
+  ]
   move-turtles
   tick
 end
 
 to simulate-arrival-process
   foreach sort(entry-points with [count turtles-here = 0])[ ;;foreach free entry-point
+      let actual-entry-point ?
       if random-float 1 < entry-ratio[ ;;i create a turtle
         ifelse random-float 1 < disabled-ratio[
           create-disableds 1
           [
-            set xcor [pxcor] of ?
-            set ycor [pycor] of ?
+            set xcor [pxcor] of actual-entry-point
+            set ycor [pycor] of actual-entry-point
             set shape "x"
             set speed disabled-speed
             set color red
@@ -203,13 +179,14 @@ to simulate-arrival-process
             set ticks-count 0
             set entry-point-id entry-id
             set conformist true
+            update-entry-stats
           ]
         ]
         [
           create-normal-persons 1
           [
-            set xcor [pxcor] of ?
-            set ycor [pycor] of ?
+            set xcor [pxcor] of actual-entry-point
+            set ycor [pycor] of actual-entry-point
             set speed normal-speed
             set color blue
             set altruism global-altruism
@@ -222,10 +199,15 @@ to simulate-arrival-process
               set conformist false
               set color green
             ]
+            update-entry-stats
           ]
         ]
       ]
   ]
+end
+
+to update-entry-stats
+  table:put entry-stats entry-id (table:get entry-stats entry-id) + 1
 end
 
 to move-turtles
@@ -247,14 +229,17 @@ to try-to-help-a-disabled
       ifelse random-float 1 < altruism [ ;;if i am altruist
         let random-disabled one-of patches-with-disabled-neighbor ;;pick a random disabled
         let disabled-ticks-count 0
+        let secondary-entry 0
         ask random-disabled [ ;;and "help" him
           ask disableds-here [
             set disabled-ticks-count ticks-count
+            set secondary-entry entry-point-id
             die
           ]
         ]
         set speed (disabled-speed + normal-speed) / 2 ;;now i'm slower
         set ticks-count max list ticks-count disabled-ticks-count
+        set secondary-entry-point-id secondary-entry
         ifelse conformist[
           set color orange
         ]
@@ -333,30 +318,44 @@ end
 
 to check-if-exit
   if member? patch-here exit-points[
-    update-global-stats
+    update-exit-stats
+    update-sojourn-stats
     die
   ]
 end
 
-to update-global-stats
-  let entry-exit-pair table:get (table:get global-stats (word "exit" exit-id)) (word "entry" entry-point-id)
-  let class table:get classes color
-  let actual-count table:get (table:get entry-exit-pair class) "count"
-  set actual-count actual-count + 1
-  let actual-ticks table:get (table:get entry-exit-pair class) "tick-count"
-  set actual-ticks actual-ticks + ticks-count
-  table:put (table:get entry-exit-pair class) "count" actual-count
-  table:put (table:get entry-exit-pair class) "tick-count" actual-ticks
+to update-exit-stats
+  let entry-exit-pair (word entry-point-id "," [exit-id] of patch-here)
+  ifelse color = orange or color = yellow [ ;; devo contarne due in caso di altruisti
+    table:put entry-exit-stats entry-exit-pair (table:get entry-exit-stats entry-exit-pair ) + 1
+    let secondary-entry-exit-pair (word secondary-entry-point-id "," [exit-id] of patch-here)
+    table:put entry-exit-stats secondary-entry-exit-pair (table:get entry-exit-stats secondary-entry-exit-pair) + 1
+  ]
+  [
+    table:put entry-exit-stats entry-exit-pair (table:get entry-exit-stats entry-exit-pair ) + 1
+  ]
+end
+
+to update-sojourn-stats
+  let class table:get turtles-classes color
+  let aux table:get global-sojourn-stats entry-point-id
+  table:put aux class table:get aux class + ticks-count
+  let aux2 table:get global-entry-stats entry-point-id
+  table:put aux2 class table:get aux2 class + 1
+  table:put global-sojourn-stats entry-point-id aux
+  table:put global-entry-stats entry-point-id aux2
+  ;;show global-sojourn-stats
+  ;;show global-entry-stats
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-235
-31
-905
-722
+276
+33
+814
+592
 -1
 -1
-15.0
+12.0
 1
 10
 1
@@ -372,15 +371,15 @@ GRAPHICS-WINDOW
 43
 1
 1
-0
+1
 ticks
 30.0
 
 BUTTON
-32
-48
-95
-81
+73
+69
+136
+102
 NIL
 setup
 NIL
@@ -394,10 +393,10 @@ NIL
 1
 
 BUTTON
-31
-425
-94
-458
+72
+397
+135
+430
 NIL
 go
 T
@@ -411,10 +410,10 @@ NIL
 0
 
 SLIDER
-30
-593
-202
-626
+71
+565
+243
+598
 global-altruism
 global-altruism
 0
@@ -426,10 +425,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-29
-715
-201
-748
+72
+689
+244
+722
 disabled-ratio
 disabled-ratio
 0
@@ -441,10 +440,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-30
-635
-202
-668
+71
+607
+243
+640
 global-conformism
 global-conformism
 0
@@ -456,25 +455,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-31
-551
-203
-584
+72
+523
+244
+556
 entry-ratio
 entry-ratio
 0.0
 1
-0.1
+1
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-31
-469
-203
-502
+72
+441
+244
+474
 normal-speed
 normal-speed
 0.05
@@ -486,10 +485,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-31
-510
-203
-543
+72
+482
+244
+515
 disabled-speed
 disabled-speed
 0.05
@@ -501,10 +500,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-87
-204
-120
+73
+108
+245
+141
 roads-size
 roads-size
 2
@@ -516,10 +515,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-32
-126
-204
-159
+73
+147
+245
+180
 n-roads
 n-roads
 5
@@ -531,10 +530,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-30
-675
-202
-708
+73
+649
+245
+682
 conformism-radius
 conformism-radius
 1
@@ -545,101 +544,47 @@ conformism-radius
 NIL
 HORIZONTAL
 
-PLOT
-936
-127
-1447
-390
-Average ticks count on selected entry-exit pair
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-true
-"" ""
-PENS
-"conformists" 1.0 0 -13345367 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists\" \"count\" \n           \n]"
-"disableds" 1.0 0 -2674135 false "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"disableds\" \"count\" \n           \n]"
-"conformists-altruists" 1.0 0 -955883 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-altruists\" \"count\" \n           \n]"
-"conformists-non-altruists" 1.0 0 -16777216 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"conformists-non-altruists\" \"count\" \n           \n]"
-"non-conformists" 1.0 0 -10899396 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"anti-conformists\" \"count\" \n           \n]"
-"non-conformists-non-altruists" 1.0 0 -7500403 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-non-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-non-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-non-altruists\" \"count\" \n           \n]"
-"non-conformists-altruists" 1.0 0 -1184463 true "" "if (table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-altruists\" \"count\" > 0) [\nplot table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-altruists\" \"tick-count\" \n           /\n     table:get \n       table:get \n         table:get \n           table:get global-stats (word \"exit\" plot-exit-number) (word \"entry\" plot-entry-number) \"non-conformists-altruists\" \"count\" \n           \n]"
+SWITCH
+74
+195
+245
+228
+only-2-exits?
+only-2-exits?
+0
+1
+-1000
 
-SLIDER
-1049
-34
-1221
-67
-plot-entry-number
-plot-entry-number
+SWITCH
+74
+240
+244
+273
+only-2-entries?
+only-2-entries?
+0
 1
-n-roads * 2
-2
-1
-1
-NIL
-HORIZONTAL
+-1000
 
-SLIDER
-1048
+SWITCH
+75
+287
+241
+320
+add-obstacles?
+add-obstacles?
+0
+1
+-1000
+
+SWITCH
 73
-1220
-106
-plot-exit-number
-plot-exit-number
-1
-n-roads * 2
-2
-1
-1
-NIL
-HORIZONTAL
-
-SWITCH
-33
-174
-204
-207
-only-2-exits?
-only-2-exits?
-0
-1
--1000
-
-SWITCH
-33
-219
-203
-252
-only-2-entries?
-only-2-entries?
-1
-1
--1000
-
-SWITCH
-34
-266
-200
-299
-add-obstacles?
-add-obstacles?
-0
-1
--1000
-
-SWITCH
-32
-313
-200
-346
+334
+241
+367
 two-lines-entries?
 two-lines-entries?
-1
+0
 1
 -1000
 
@@ -955,6 +900,430 @@ NetLogo 5.3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="entry-ratio-with-obstacles" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>table:get entry-stats 1</metric>
+    <metric>table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "1,1" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "1,2" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "2,1" / table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "2,2" / table:get entry-stats 2</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="normal-speed">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="entry-ratio" first="0.05" step="0.05" last="1"/>
+  </experiment>
+  <experiment name="conformism-with-obstacles" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>table:get entry-stats 1</metric>
+    <metric>table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "1,1" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "1,2" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "2,1" / table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "2,2" / table:get entry-stats 2</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="normal-speed">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="global-conformism" first="0" step="0.05" last="1"/>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="entry-ratio">
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="conformism-radius-with-obstacles" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>table:get entry-stats 1</metric>
+    <metric>table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "1,1" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "1,2" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "2,1" / table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "2,2" / table:get entry-stats 2</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="normal-speed">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="conformism-radius" first="1" step="1" last="10"/>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="entry-ratio">
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="entry-ratio-sojourn-with-obstacles" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>table:get table:get global-sojourn-stats 1 "conformists" / table:get table:get global-entry-stats 1 "conformists"</metric>
+    <metric>table:get table:get global-sojourn-stats 1 "non-conformists" / table:get table:get global-entry-stats 1 "non-conformists"</metric>
+    <metric>table:get table:get global-sojourn-stats 1 "conformists-altruists" / table:get table:get global-entry-stats 1 "conformists-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 1 "conformists-non-altruists" / table:get table:get global-entry-stats 1 "conformists-non-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 1 "non-conformists-altruists" / table:get table:get global-entry-stats 1 "non-conformists-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 1 "non-conformists-non-altruists" / table:get table:get global-entry-stats 1 "non-conformists-non-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 2 "conformists" / table:get table:get global-entry-stats 2 "conformists"</metric>
+    <metric>table:get table:get global-sojourn-stats 2 "non-conformists" / table:get table:get global-entry-stats 2 "non-conformists"</metric>
+    <metric>table:get table:get global-sojourn-stats 2 "conformists-altruists" / table:get table:get global-entry-stats 2 "conformists-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 2 "conformists-non-altruists" / table:get table:get global-entry-stats 2 "conformists-non-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 2 "non-conformists-altruists" / table:get table:get global-entry-stats 2 "non-conformists-altruists"</metric>
+    <metric>table:get table:get global-sojourn-stats 2 "non-conformists-non-altruists" / table:get table:get global-entry-stats 2 "non-conformists-non-altruists"</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="normal-speed">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="entry-ratio" first="0.05" step="0.05" last="1"/>
+  </experiment>
+  <experiment name="global-sojourn-with-obstacles" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>(table:get table:get global-sojourn-stats 1 "conformists" + table:get table:get global-sojourn-stats 1 "non-conformists" + table:get table:get global-sojourn-stats 1 "conformists-non-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 1 "conformists" + table:get table:get global-entry-stats 1 "non-conformists"+ table:get table:get global-entry-stats 1 "conformists-altruists"+ table:get table:get global-entry-stats 1 "conformists-non-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-non-altruists")</metric>
+    <metric>(table:get table:get global-sojourn-stats 2 "conformists" + table:get table:get global-sojourn-stats 2 "non-conformists" + table:get table:get global-sojourn-stats 2 "conformists-non-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 2 "conformists" + table:get table:get global-entry-stats 2 "non-conformists"+ table:get table:get global-entry-stats 2 "conformists-altruists"+ table:get table:get global-entry-stats 2 "conformists-non-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-non-altruists")</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="normal-speed">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="entry-ratio" first="0.05" step="0.05" last="1"/>
+  </experiment>
+  <experiment name="global-sojourn-with-obstacles-with-another-speed" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>(table:get table:get global-sojourn-stats 1 "conformists" + table:get table:get global-sojourn-stats 1 "non-conformists" + table:get table:get global-sojourn-stats 1 "conformists-non-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 1 "conformists" + table:get table:get global-entry-stats 1 "non-conformists"+ table:get table:get global-entry-stats 1 "conformists-altruists"+ table:get table:get global-entry-stats 1 "conformists-non-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-non-altruists")</metric>
+    <metric>(table:get table:get global-sojourn-stats 2 "conformists" + table:get table:get global-sojourn-stats 2 "non-conformists" + table:get table:get global-sojourn-stats 2 "conformists-non-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 2 "conformists" + table:get table:get global-entry-stats 2 "non-conformists"+ table:get table:get global-entry-stats 2 "conformists-altruists"+ table:get table:get global-entry-stats 2 "conformists-non-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-non-altruists")</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="normal-speed">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="entry-ratio" first="0.05" step="0.05" last="1"/>
+  </experiment>
+  <experiment name="speed-sojourn-with-obstacles" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>(table:get table:get global-sojourn-stats 1 "conformists" + table:get table:get global-sojourn-stats 1 "non-conformists" + table:get table:get global-sojourn-stats 1 "conformists-non-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 1 "conformists" + table:get table:get global-entry-stats 1 "non-conformists"+ table:get table:get global-entry-stats 1 "conformists-altruists"+ table:get table:get global-entry-stats 1 "conformists-non-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-non-altruists")</metric>
+    <metric>(table:get table:get global-sojourn-stats 2 "conformists" + table:get table:get global-sojourn-stats 2 "non-conformists" + table:get table:get global-sojourn-stats 2 "conformists-non-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 2 "conformists" + table:get table:get global-entry-stats 2 "non-conformists"+ table:get table:get global-entry-stats 2 "conformists-altruists"+ table:get table:get global-entry-stats 2 "conformists-non-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-non-altruists")</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="normal-speed" first="0.1" step="0.1" last="1"/>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="entry-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="speed-sojourn-with-obstacles-diffeent-ratio" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>(table:get table:get global-sojourn-stats 1 "conformists" + table:get table:get global-sojourn-stats 1 "non-conformists" + table:get table:get global-sojourn-stats 1 "conformists-non-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-altruists" + table:get table:get global-sojourn-stats 1 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 1 "conformists" + table:get table:get global-entry-stats 1 "non-conformists"+ table:get table:get global-entry-stats 1 "conformists-altruists"+ table:get table:get global-entry-stats 1 "conformists-non-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-altruists"+ table:get table:get global-entry-stats 1 "non-conformists-non-altruists")</metric>
+    <metric>(table:get table:get global-sojourn-stats 2 "conformists" + table:get table:get global-sojourn-stats 2 "non-conformists" + table:get table:get global-sojourn-stats 2 "conformists-non-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-altruists" + table:get table:get global-sojourn-stats 2 "non-conformists-non-altruists") / (table:get table:get global-entry-stats 2 "conformists" + table:get table:get global-entry-stats 2 "non-conformists"+ table:get table:get global-entry-stats 2 "conformists-altruists"+ table:get table:get global-entry-stats 2 "conformists-non-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-altruists"+ table:get table:get global-entry-stats 2 "non-conformists-non-altruists")</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="normal-speed" first="0.1" step="0.1" last="1"/>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="entry-ratio">
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="speed-with-obstacles" repetitions="1" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>count turtles = 0 and ticks &gt; 100</exitCondition>
+    <metric>table:get entry-stats 1</metric>
+    <metric>table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "1,1" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "1,2" / table:get entry-stats 1</metric>
+    <metric>table:get entry-exit-stats "2,1" / table:get entry-stats 2</metric>
+    <metric>table:get entry-exit-stats "2,2" / table:get entry-stats 2</metric>
+    <enumeratedValueSet variable="only-2-exits?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-ratio">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-altruism">
+      <value value="0.3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="roads-size">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="normal-speed" first="0.1" step="0.1" last="1"/>
+    <enumeratedValueSet variable="conformism-radius">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="add-obstacles?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="global-conformism">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="two-lines-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="only-2-entries?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-roads">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="disabled-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="entry-ratio">
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
